@@ -1,0 +1,89 @@
+/* Ported VERBATIM from Main/thali-mockup.html's SCORE STRIP section (lines ~134-155) —
+   plan §1a: mockup first, then the app. Do not restyle; the mockup is authoritative.
+   Relies on tokens.css (imported globally) for colour/spacing and does not redefine any
+   base.css primitive. Owned by ScoreStrip.tsx alone. */
+
+.scores {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(4, 1fr);
+  gap: 11px;
+  margin-bottom: 18px;
+}
+.score {
+  border: var(--bd) solid var(--ink);
+  border-radius: var(--r);
+  background: var(--stock);
+  box-shadow: var(--off) var(--off) 0 var(--sc);
+  padding: 13px 16px;
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition:
+    transform 0.16s var(--ez),
+    box-shadow 0.16s var(--ez);
+}
+.score:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: calc(var(--off) + 3px) calc(var(--off) + 3px) 0 var(--sc);
+}
+.score .v {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.score .n {
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-top: 3px;
+  line-height: 1.25;
+}
+.score .k {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.score.prog {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+}
+.meter {
+  width: 62px;
+  height: 62px;
+  flex: 0 0 auto;
+  position: relative;
+}
+.meter svg {
+  transform: rotate(-90deg);
+}
+.meter circle {
+  fill: none;
+  stroke-width: 9;
+  stroke-linecap: butt;
+}
+.meter .bg {
+  stroke: var(--paper-2);
+}
+.meter .fg {
+  stroke: var(--pink);
+  transition: stroke-dashoffset 0.7s var(--ez);
+}
+.meter .rim {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+.meter .t {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 14px;
+}

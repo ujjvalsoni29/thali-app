@@ -1,0 +1,97 @@
+/* Ported VERBATIM from Main/thali-mockup.html — the rotating note strip (`.note`, its
+   `pop` keyframes, lines ~157-163) and the toast + confetti system (`.toast`/`.confetti`/
+   `.cf`/`@keyframes fall`, lines ~368-383). Plan §1a: mockup first, then the app — do not
+   restyle. Imported once from `Toast.tsx` since NoteTicker, Toast and Confetti are always
+   mounted together by the page that assembles them. */
+
+.note {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+  border: var(--bd) solid var(--ink);
+  border-radius: 999px;
+  background: var(--marigold);
+  color: var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 13.5px;
+}
+.note b {
+  font-weight: 800;
+}
+.note .pin {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--ink);
+  flex: 0 0 auto;
+}
+.note span.t {
+  animation: pop 0.35s var(--ez);
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ============================================================================
+   TOAST + CONFETTI
+   ============================================================================ */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%) translateY(14px);
+  z-index: 85;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: var(--bd) solid var(--ink);
+  box-shadow: 4px 4px 0 var(--pink);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 14px;
+  max-width: min(640px, 92vw);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.24s var(--ez);
+  text-align: center;
+}
+.toast.on {
+  opacity: 1;
+  transform: translateX(-50%);
+}
+.confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 90;
+  overflow: hidden;
+}
+.cf {
+  position: absolute;
+  top: -20px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  border: 2px solid var(--ink);
+  animation: fall 2.4s cubic-bezier(0.3, 0.6, 0.5, 1) forwards;
+}
+@keyframes fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--dx), 108vh, 0) rotate(var(--rot));
+    opacity: 0;
+  }
+}

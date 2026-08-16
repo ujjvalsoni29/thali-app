@@ -1,0 +1,93 @@
+/* Ported VERBATIM from Main/thali-mockup.html's MASTHEAD section (lines ~113-133) —
+   plan §1a: mockup first, then the app. Do not restyle; the mockup is authoritative.
+   Relies on tokens.css (imported globally) and base.css's `.sticker` primitive, which
+   this file does not redefine. */
+
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 26px 0 18px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-right: auto;
+}
+.brand .mark {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+}
+.brand .txt {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.brand .wm {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 40px;
+  line-height: 0.86;
+  letter-spacing: -0.03em;
+}
+.brand .guj {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 29px;
+  color: var(--pink);
+  line-height: 0.86;
+}
+.brand .sub {
+  display: block;
+  width: 100%;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-top: 3px;
+}
+
+.weeknav {
+  display: flex;
+  align-items: center;
+  border: var(--bd) solid var(--ink);
+  border-radius: 999px;
+  background: var(--stock);
+  box-shadow: 3px 3px 0 var(--ink);
+  overflow: hidden;
+  height: 44px;
+}
+.weeknav button {
+  width: 40px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s;
+}
+.weeknav button:hover {
+  background: var(--marigold);
+}
+.weeklabel {
+  padding: 0 15px;
+  text-align: center;
+  min-width: 186px;
+  border-left: var(--bd) solid var(--ink);
+  border-right: var(--bd) solid var(--ink);
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.weeklabel b {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.1;
+}
+.weeklabel span {
+  font-size: 11px;
+  color: var(--ink-2);
+  line-height: 1.2;
+}
