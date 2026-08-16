@@ -1,0 +1,82 @@
+/* Ported VERBATIM from Main/thali-mockup.html's :root and html[data-mode="dark"] blocks
+   (plan §A rule 5 — mockup first, then Manc's approval, then the app; step-02 §2c: "not
+   'inspired by' — the same values"). This is the one file in the app where raw hex is
+   legal — see thali-app/CLAUDE.md §1 and scripts/check.mjs's raw-hex check. Do not
+   redefine any of these tokens elsewhere; steps 06–11 consume them, they don't restate
+   them. */
+
+/* ============================================================================
+   THE INK DRUMS — the only place a raw colour may appear.
+   ============================================================================ */
+:root {
+  --display: "Anek Gujarati", "Gujarati Sangam MN", system-ui, sans-serif;
+  --sans: "Hanken Grotesk", -apple-system, "Segoe UI", sans-serif;
+
+  --paper: #fbf4e4;
+  --paper-2: #f3e9d2;
+  --stock: #fffdf7;
+  --stock-2: #fdf6e8;
+  --ink: #231f1c;
+  --ink-2: #5c554c;
+  --ink-3: #94897b;
+  --dot: rgba(35, 31, 28, 0.13);
+  /* the colour type takes when it sits ON an ink block. One token instead of a
+     dark-mode override beside every reversed-type rule. */
+  --on-ink: #fffdf7;
+
+  --pink: #ff4e77;
+  --marigold: #ffb000;
+  --teal: #00a79d;
+  --blue: #3a54e8;
+  --grape: #8b4dd8;
+  --tangerine: #ff6a1f;
+  --leaf: #3e9b4f;
+  --brick: #e03e2f;
+
+  /* seven nights, seven ink drums — identical in both modes, deliberately */
+  --t-ghar: var(--marigold);
+  --t-punjab: var(--brick);
+  --t-light: var(--leaf);
+  --t-passport: var(--blue);
+  --t-firsttime: var(--grape);
+  --t-nightoff: var(--pink);
+  --t-street: var(--tangerine);
+
+  --p-ujjval: var(--blue);
+  --p-mansi: var(--pink);
+  --p-mom: var(--marigold);
+  --p-dad: var(--leaf);
+  --p-naisu: var(--grape);
+
+  --r: 14px;
+  --r-sm: 9px;
+  --bd: 2.5px;
+  --off: 5px;
+  --ez: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* DARK = the same press run on black stock.
+   A printer switching to dark paper does not reuse the light-stock inks — they go
+   muddy. He mixes brighter, more fluorescent versions of the SAME hues. So the eight
+   drums keep their identity (pink is still pink) and gain luminance, which is what
+   makes blue and grape survive on near-black instead of disappearing into it. */
+html[data-mode="dark"] {
+  --paper: #1a1613;
+  --paper-2: #241e19;
+  --stock: #2a231c;
+  --stock-2: #332a21;
+  --ink: #fbf2df;
+  --ink-2: #bdb09c;
+  --ink-3: #8a7e6c;
+  --dot: rgba(251, 242, 223, 0.1);
+  --on-ink: #17130f;
+
+  --pink: #ff6e92;
+  --marigold: #ffc53d;
+  --teal: #2ed3c6;
+  --blue: #8093ff;
+  --grape: #bc8bf2;
+  --tangerine: #ff8e4f;
+  --leaf: #63cc78;
+  --brick: #ff7061;
+}

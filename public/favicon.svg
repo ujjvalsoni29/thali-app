@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- THALI mark: a thali plate from above. Steel rim, four katoris, rice in the middle.
+       Screen-printed look to match the app: flat inks, thick ink outline, no gradients.
+       Reads at 16px because it is four dots in a ring and nothing else. -->
+  <rect width="64" height="64" rx="13" fill="#FBF4E4"/>
+  <!-- misregistered under-print, the signature move of the whole design -->
+  <circle cx="34" cy="34" r="23" fill="#FF4E77" opacity=".85"/>
+  <circle cx="32" cy="32" r="23" fill="#FFFDF7" stroke="#231F1C" stroke-width="3.4"/>
+  <circle cx="32" cy="32" r="16.5" fill="none" stroke="#231F1C" stroke-width="1.5" opacity=".35"/>
+  <!-- four katoris -->
+  <circle cx="32" cy="18.5" r="6"   fill="#FFB000" stroke="#231F1C" stroke-width="2.6"/>
+  <circle cx="45.5" cy="32" r="6"   fill="#00A79D" stroke="#231F1C" stroke-width="2.6"/>
+  <circle cx="32" cy="45.5" r="6"   fill="#3A54E8" stroke="#231F1C" stroke-width="2.6"/>
+  <circle cx="18.5" cy="32" r="6"   fill="#FF6A1F" stroke="#231F1C" stroke-width="2.6"/>
+  <!-- rice -->
+  <circle cx="32" cy="32" r="4.6" fill="#231F1C"/>
+</svg>

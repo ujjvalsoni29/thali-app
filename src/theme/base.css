@@ -1,0 +1,279 @@
+/* Shared Thali law: the reset, the halftone screen, and the primitives every later step
+   reuses instead of redefining — the halftone `body::before`, `.sticker`, `.mini` /
+   `.mini.round`, `.chip`, `.field`, `.segs`, `.blank` (step-02 §2c). Steps 06–11 must not
+   redefine any of these. Page- and component-specific CSS (the board, the pickers, The
+   Kitchen, the print sheet) is NOT here — it lands with the step that owns it, ported
+   from `Main/thali-mockup.html` rather than redesigned. */
+
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--sans);
+  font-size: 14.5px;
+  line-height: 1.5;
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  transition:
+    background 0.3s,
+    color 0.3s;
+}
+
+/* the halftone screen — this is the texture, not a noise overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(var(--dot) 1.1px, transparent 1.2px);
+  background-size: 6px 6px;
+}
+
+.shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1520px;
+  margin: 0 auto;
+  padding: 0 26px;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+}
+
+input {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--display);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.05;
+}
+
+::selection {
+  background: var(--marigold);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================================
+   STICKER — the button. An outlined pill with a hard offset shadow that
+   physically presses down on :active. No blur, ever (thali-app/CLAUDE.md §1).
+   ============================================================================ */
+.sticker {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 17px;
+  border: var(--bd) solid var(--ink);
+  border-radius: 999px;
+  background: var(--stock);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition:
+    transform 0.1s,
+    box-shadow 0.1s,
+    background 0.15s;
+}
+.sticker:hover {
+  background: var(--marigold);
+}
+.sticker:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--ink);
+}
+.sticker.hot {
+  background: var(--pink);
+  color: var(--on-ink);
+}
+.sticker.hot:hover {
+  background: var(--tangerine);
+}
+.sticker.sq {
+  width: 38px;
+  padding: 0;
+  justify-content: center;
+}
+.sticker svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ============================================================================
+   MINI — the small round icon button (a pencil on a row) and its pill cousin
+   (a person row's "Pick…" / "Eat the plan" control). Same family, two shapes —
+   keep them in one rule so a specificity accident can't split their padding
+   again (review round 3, item 3: the pencil sat off-centre because a generic
+   `.mini` rule leaked `padding:4px 12px` into a 24px circle).
+   ============================================================================ */
+.mini {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 4px 12px;
+  background: var(--stock);
+  transition: all 0.13s;
+}
+.mini:hover {
+  background: var(--marigold);
+}
+.mini.on {
+  background: var(--pink);
+  color: var(--on-ink);
+}
+.mini.round {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  transition: background 0.14s;
+}
+.mini.round svg {
+  display: block;
+  width: 12.5px;
+  height: 12.5px;
+}
+
+/* ============================================================================
+   CHIP — a filter/select pill (theme filters, freeform tags).
+   ============================================================================ */
+.chip {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 5px 13px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--stock);
+  transition: all 0.13s var(--ez);
+}
+.chip:hover {
+  background: var(--paper-2);
+  transform: translateY(-1px);
+}
+.chip[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+.chip.ink[aria-pressed="true"] {
+  background: var(--c);
+  color: var(--on-ink);
+  border-color: var(--ink);
+}
+
+/* ============================================================================
+   FIELD — a text input in its pill housing (search boxes, add-a-thing rows).
+   ============================================================================ */
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--stock);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 0 14px;
+  height: 38px;
+  flex: 1;
+  min-width: 180px;
+}
+.field input {
+  border: 0;
+  background: none;
+  outline: none;
+  width: 100%;
+  font-size: 14px;
+}
+.field input::placeholder {
+  color: var(--ink-3);
+}
+.field svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+/* ============================================================================
+   SEGS — a segmented control (axis switchers in The Kitchen).
+   ============================================================================ */
+.segs {
+  display: flex;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--stock);
+}
+.segs button {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 7px 15px;
+  border-left: 2px solid var(--ink);
+  transition: background 0.14s;
+}
+.segs button:first-child {
+  border-left: 0;
+}
+.segs button:hover {
+  background: var(--paper-2);
+}
+.segs button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* ============================================================================
+   BLANK — the empty-state panel (an empty picker list, a bin with nothing in it).
+   ============================================================================ */
+.blank {
+  padding: 22px 14px;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  text-align: center;
+  border: 2px dashed var(--ink-3);
+  border-radius: var(--r-sm);
+}

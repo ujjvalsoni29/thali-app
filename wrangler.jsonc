@@ -1,0 +1,40 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "thali",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-08-16",
+
+  // The SPA. `assets.directory` is injected by @cloudflare/vite-plugin — do not set it here.
+  // single-page-application: any non-/api path that isn't a real file falls back to index.html,
+  // which is what makes react-router's client-side routes work on a hard refresh.
+  "assets": {
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+
+  // Thali is LOCAL-ONLY (plan §B). Everything runs on Manc's own machine via `npm run dev`;
+  // there is no deploy, no domain, and no Cloudflare account involved. `DEPLOY_MODE` is read
+  // from this var, never sniffed from the hostname — hostname sniffing breaks
+  // `vite dev --host`, which is how Manc opens this on a phone in the kitchen.
+  "vars": { "DEPLOY_MODE": "local" },
+
+  // D1. Local dev uses `database_name` and stores the SQLite file under .wrangler/state/;
+  // `database_id` is a placeholder that only matters for a real remote database — Thali has
+  // no deploy plan, so this stays a placeholder indefinitely unless that changes.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "thali",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Belt and braces for a local-only app: even an accidental `wrangler deploy` must not
+  // publish a public URL. There is no Cloudflare Access in front of Thali (there is no auth
+  // story at all — plan §B), so a live workers.dev URL would serve the family's plan to the
+  // open internet with nothing in front of it.
+  "workers_dev": false,
+
+  "observability": { "enabled": true }
+}

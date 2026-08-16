@@ -1,0 +1,7 @@
+# Local-only variables for `npm run dev`. Copy to `.dev.vars` (gitignored).
+# There are no secrets in Thali today — there is no auth story at all (plan §B: no
+# login, no session table, no password), and local-only means the DEPLOY_MODE gate
+# in worker/lib/access.ts stays a no-op. This file exists so that if a step ever
+# introduces a secret, there is an obvious place for it and an obvious thing to commit.
+#
+# NEVER put a Cloudflare API token or account ID in this repo.

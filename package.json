@@ -1,0 +1,39 @@
+{
+  "name": "thali-app",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "dev": "vite dev",
+    "check": "node scripts/check.mjs",
+    "build": "node scripts/check.mjs && tsc -b && vite build",
+    "typecheck": "tsc -b --noEmit",
+    "preview": "npm run build && vite preview",
+    "deploy": "npm run build && wrangler deploy",
+    "cf-typegen": "wrangler types",
+    "db:migrate:local": "wrangler d1 migrations apply thali --local",
+    "db:migrate:remote": "wrangler d1 migrations apply thali --remote",
+    "db:console:local": "wrangler d1 execute thali --local --command"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.62.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router": "^8.3.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.13.0",
+    "@cloudflare/workers-types": "^5.20260722.1",
+    "@types/node": "^22.19.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^4.4.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0",
+    "wrangler": "^4.24.0"
+  }
+}
