@@ -15,14 +15,11 @@ import { useCreateDish, useCreateRestaurant, useSetOverride, useSetSlot } from "
  * `data-savefmt`/`data-editdish` branches of the global click handler (~lines 1593-1630) —
  * plan §1a: mockup first, then the app.
  *
- * Two deliberate deviations from the mockup, both because step 08 (per-person overrides)
- * does not exist yet:
- *  - the `forPerson` branch calls the same `useSetOverride`/`onClose()` the plan-wide branch
- *    calls `useSetSlot`/`onClose()` for, rather than the mockup's `openOverrides()` re-open —
- *    there is no overrides sheet yet for it to return to.
- *  - the free-text one-off field and "Eat the plan" clear button (mockup's `data-freeov`/
- *    `data-clearov`) are real step-08 UI and are not built here — only a static banner
- *    sentence, per the step file.
+ * Step 08 (per-person overrides) added the free-text one-off field and "Eat the plan" clear
+ * button (mockup's `data-freeov`/`data-clearov`), and wired the `forPerson` branch's saves to
+ * call `onReturnToRoster()` instead of `onClose()` — matching the mockup's `openOverrides()`
+ * re-open of the roster sheet after a person-mode save/clear, rather than closing the whole
+ * picker flow the way the plan-wide branch does.
  *
  * This component is mounted once, persistently (like `Toast.tsx`), and toggles `Sheet`'s
  * `open` prop — it is NOT remounted per slot via a changing `key`. That is deliberate: `Sheet`
@@ -45,6 +42,11 @@ export interface MealPickerProps {
   weekStart: string;
   week: WeekState;
   onClose(): void;
+  /** Called instead of onClose() when a person-mode (forPerson set) save/clear succeeds —
+   *  the mockup's openOverrides() re-open. Never called when forPerson is null; the
+   *  plan-wide path still calls onClose() same as before. The caller (Week.tsx) re-shows
+   *  the roster sheet for the same weekday/meal. */
+  onReturnToRoster(): void;
   /** A pencil on any row was clicked. `kind` matches what the row was: "dish" for a dinner
    *  dish, "shaak" for a lunch shaak, "rest" for a restaurant. The caller (not you) decides
    *  what "back" means — you just report the click. */
@@ -163,7 +165,7 @@ function PickList(props: PickListProps): ReactElement {
 }
 
 export function MealPicker(props: MealPickerProps): ReactElement {
-  const { open, weekday, meal, forPerson, weekStart, week, onClose, onEditItem } = props;
+  const { open, weekday, meal, forPerson, weekStart, week, onClose, onReturnToRoster, onEditItem } = props;
 
   const setSlot = useSetSlot();
   const setOverride = useSetOverride();
@@ -172,6 +174,10 @@ export function MealPicker(props: MealPickerProps): ReactElement {
 
   const person = forPerson ? (PEOPLE.find((p) => p.id === forPerson) ?? null) : null;
   const cur = forPerson ? findOverride(week.overrides, weekday, meal, forPerson) : findItem(week.items, weekday, meal);
+  // `cur`'s type is `PlanOverride | PlanItem | null` — TS can't correlate it back to
+  // `forPerson` through the ternary above, and `freeText` only exists on `PlanOverride`.
+  // Narrow with `in` rather than casting.
+  const curFreeText = cur && "freeText" in cur ? cur.freeText : null;
   const theme = week.themeRoster.find((t) => t.id === week.themes[weekday]) ?? week.themeRoster[0];
   const date = servedOn(weekStart, weekday);
 
@@ -179,6 +185,7 @@ export function MealPicker(props: MealPickerProps): ReactElement {
   const [showAll, setShowAll] = useState(false);
   const [rWhen, setRWhen] = useState<WhenKind | null>(null);
   const [fmt, setFmt] = useState<LunchFormat>(cur?.lunchFormat ?? LUNCH_FORMATS[0].id);
+  const [freeText, setFreeText] = useState(curFreeText ?? "");
   const [newName, setNewName] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -194,6 +201,7 @@ export function MealPicker(props: MealPickerProps): ReactElement {
     setShowAll(false);
     setRWhen(null);
     setFmt(cur?.lunchFormat ?? LUNCH_FORMATS[0].id);
+    setFreeText(curFreeText ?? "");
     setNewName("");
     setNewUrl("");
   }, [open, weekday, meal, forPerson]);
@@ -207,7 +215,7 @@ export function MealPicker(props: MealPickerProps): ReactElement {
     const body: { dishId?: string; restaurantId?: string; lunchFormat?: LunchFormat } =
       kind === "rest" ? { restaurantId: id } : kind === "shaak" ? { dishId: id, lunchFormat: fmt } : { dishId: id };
     if (forPerson) {
-      setOverride.mutate({ weekStart, weekday, meal, personId: forPerson, ...body }, { onSuccess: onClose });
+      setOverride.mutate({ weekStart, weekday, meal, personId: forPerson, ...body }, { onSuccess: onReturnToRoster });
     } else {
       setSlot.mutate({ weekStart, weekday, meal, ...body }, { onSuccess: onClose });
     }
@@ -215,10 +223,39 @@ export function MealPicker(props: MealPickerProps): ReactElement {
 
   function handleSaveFormat() {
     if (forPerson) {
-      setOverride.mutate({ weekStart, weekday, meal, personId: forPerson, lunchFormat: fmt }, { onSuccess: onClose });
+      setOverride.mutate({ weekStart, weekday, meal, personId: forPerson, lunchFormat: fmt }, { onSuccess: onReturnToRoster });
     } else {
       setSlot.mutate({ weekStart, weekday, meal, lunchFormat: fmt }, { onSuccess: onClose });
     }
+  }
+
+  /** Text matching a known dish, restaurant, or lunch format by name resolves to that id
+   *  rather than being stored as a literal string, so it still counts for last-eaten. Only
+   *  genuinely unknown text stays free text. Archived dishes/restaurants are not filtered out
+   *  of this match — an archived item is still "known" by name, and resolving to its id is
+   *  exactly what lets it count for last-eaten. */
+  function resolveFreeText(raw: string): { dishId?: string; restaurantId?: string; lunchFormat?: LunchFormat; freeText?: string } {
+    const trimmed = raw.trim();
+    if (!trimmed) return {};
+    const lower = trimmed.toLowerCase();
+    const dish = week.dishes.find((d) => d.name.toLowerCase() === lower);
+    if (dish) return { dishId: dish.id };
+    const rest = week.restaurants.find((r) => r.name.toLowerCase() === lower);
+    if (rest) return { restaurantId: rest.id };
+    const fmtMatch = LUNCH_FORMATS.find((f) => f.name.toLowerCase() === lower);
+    if (fmtMatch) return { lunchFormat: fmtMatch.id };
+    return { freeText: trimmed };
+  }
+
+  function handleSetFreeText() {
+    if (!forPerson) return;
+    const resolved = resolveFreeText(freeText);
+    setOverride.mutate({ weekStart, weekday, meal, personId: forPerson, ...resolved }, { onSuccess: onReturnToRoster });
+  }
+
+  function handleClearOverride() {
+    if (!forPerson) return;
+    setOverride.mutate({ weekStart, weekday, meal, personId: forPerson }, { onSuccess: onReturnToRoster });
   }
 
   function handleAdd() {
@@ -386,6 +423,11 @@ export function MealPicker(props: MealPickerProps): ReactElement {
       </button>
       <span className="hint">Badges nudge. They never block.</span>
       <span className="sp" />
+      {person ? (
+        <button type="button" className="sticker" onClick={handleClearOverride}>
+          Eat the plan
+        </button>
+      ) : null}
       {meal === "lunch" && !fmtEntry.wantsShaak ? (
         <button type="button" className="sticker hot" onClick={handleSaveFormat}>
           Save
@@ -427,6 +469,20 @@ export function MealPicker(props: MealPickerProps): ReactElement {
             ) : null}
             <button type="button" className="sticker hot" onClick={handleAdd}>
               Add &amp; use
+            </button>
+          </div>
+        </>
+      ) : null}
+
+      {person ? (
+        <>
+          <RowLabel label="Or something one-off" />
+          <div className="newrow">
+            <label className="field">
+              <input value={freeText} onChange={(e) => setFreeText(e.target.value)} placeholder="e.g. just khichdi" />
+            </label>
+            <button type="button" className="sticker" onClick={handleSetFreeText}>
+              Set
             </button>
           </div>
         </>

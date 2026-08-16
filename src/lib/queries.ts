@@ -93,12 +93,23 @@ export function useClearSlot() {
   });
 }
 
+// `useSetOverride`/`useClearOverride`'s hook-level `onSuccess` RETURNS the invalidation
+// promise (every other mutation in this file discards it with `void`, which is fine for
+// them — their callers either close the sheet they were in or don't chain a next step off
+// the cache being fresh). Step 08's roster sheet does chain a next step: `MealPicker`'s
+// `onReturnToRoster` swaps back to `OverridesSheet` on this mutation's per-call `onSuccess`,
+// and TanStack Query only fires that per-call callback after this hook-level one's promise
+// settles (`mutation.js` awaits `options.onSuccess` before the mutation reaches its
+// "success" state, which is what the observer's per-call `onSuccess` is notified from) — so
+// if this discarded the promise the roster sheet could re-render one tick before the
+// invalidated query's background refetch had actually landed, briefly showing the
+// just-changed row's OLD value right after the user set it.
 export function useSetOverride() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: OverrideSetBody) => api<object>("override/set", body),
     onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ["week", variables.weekStart] });
+      return queryClient.invalidateQueries({ queryKey: ["week", variables.weekStart] });
     },
   });
 }
@@ -108,7 +119,7 @@ export function useClearOverride() {
   return useMutation({
     mutationFn: (body: OverrideClearBody) => api<object>("override/clear", body),
     onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ["week", variables.weekStart] });
+      return queryClient.invalidateQueries({ queryKey: ["week", variables.weekStart] });
     },
   });
 }
