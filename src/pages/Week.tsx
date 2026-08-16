@@ -17,6 +17,7 @@ import { ThemePicker } from "../components/ThemePicker";
 import { DishEditor } from "../components/DishEditor";
 import { ThemeEditor } from "../components/ThemeEditor";
 import { OverridesSheet } from "../components/OverridesSheet";
+import { KitchenPanel } from "../components/kitchen/KitchenPanel";
 
 /**
  * The week board page: masthead, score strip, note ticker, the seven day cards, the picker
@@ -51,6 +52,11 @@ import { OverridesSheet } from "../components/OverridesSheet";
  * (search text, format chips, form fields) via its own effect keyed on `open` — see
  * `MealPicker.tsx`'s and `DishEditor.tsx`'s header comments.
  *
+ * Step 09 adds `KitchenPanel`, which is NOT part of the sheet stack above — it renders inline
+ * on the page itself (like the board), with its own open/closed and active-tab state. It
+ * reaches the same `DishEditor` the picker's pencil does, via `editItemOrigin` ("picker" vs
+ * "kitchen") deciding what `onDone` returns to — see that state's own comment below.
+ *
  * What this page still deliberately leaves inert, because the components that would make
  * them do something are step 10/11's work, not this one's: Surprise me and Share the week.
  * Each of those calls `showToast` with a short "not yet" message instead of silently doing
@@ -70,7 +76,13 @@ export function Week(): ReactElement {
   const [active, setActive] = useState<ActiveSheet>(null);
   const [picker, setPicker] = useState<{ weekday: number; meal: Meal; forPerson: PersonId | null } | null>(null);
   const [themePick, setThemePick] = useState<{ weekday: number } | null>(null);
-  const [editItem, setEditItem] = useState<{ kind: "dish" | "shaak" | "rest"; id: string } | null>(null);
+  const [editItem, setEditItem] = useState<{ kind: "dish" | "shaak" | "rest"; id: string | null } | null>(null);
+  // Where a DishEditor session was opened FROM — MealPicker's own pencil (07f) always closes
+  // back to the picker it came from; The Kitchen's pencil, and its "+ Dish"/"+ Shaak"/
+  // "+ Place" stickers (09c-09e), close back to nothing — The Kitchen isn't a sheet, it's
+  // already sitting on the page underneath, so "back" there just means closing the sheet
+  // stack (step-09.md is what adds the second possible origin; step 07 only ever had one).
+  const [editItemOrigin, setEditItemOrigin] = useState<"picker" | "kitchen">("picker");
   const [editTheme, setEditTheme] = useState<{ id: string } | null>(null);
   const [overrides, setOverrides] = useState<{ weekday: number; meal: Meal } | null>(null);
 
@@ -87,6 +99,21 @@ export function Week(): ReactElement {
   }
   function openEditItem(kind: "dish" | "shaak" | "rest", id: string) {
     setEditItem({ kind, id });
+    setEditItemOrigin("picker");
+    setActive("editItem");
+  }
+  // The Kitchen's own pencil (any dcard in the Dinner/Shaaks/Restaurants tabs) — same sheet,
+  // different return address than the picker's pencil above.
+  function openKitchenEditItem(kind: "dish" | "shaak" | "rest", id: string) {
+    setEditItem({ kind, id });
+    setEditItemOrigin("kitchen");
+    setActive("editItem");
+  }
+  // The Kitchen's "+ Dish" / "+ Shaak" / "+ Place" stickers — DishEditor already has a create
+  // mode (id === null); this just routes it there instead of at an existing row.
+  function openKitchenNewItem(kind: "dish" | "shaak" | "rest") {
+    setEditItem({ kind, id: null });
+    setEditItemOrigin("kitchen");
     setActive("editItem");
   }
   function openEditTheme(id: string) {
@@ -189,6 +216,8 @@ export function Week(): ReactElement {
             })}
           </main>
 
+          <KitchenPanel week={week} onEdit={openKitchenEditItem} onNew={openKitchenNewItem} onToast={showToast} />
+
           <MealPicker
             open={active === "picker"}
             weekday={picker?.weekday ?? 0}
@@ -223,7 +252,7 @@ export function Week(): ReactElement {
             id={editItem?.id ?? null}
             week={week}
             onClose={closeSheets}
-            onDone={() => setActive("picker")}
+            onDone={() => setActive(editItemOrigin === "kitchen" ? null : "picker")}
           />
           <ThemeEditor
             open={active === "editTheme"}

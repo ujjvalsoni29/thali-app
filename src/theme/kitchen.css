@@ -1,0 +1,227 @@
+/* Ported VERBATIM from Main/thali-mockup.html's "THE KITCHEN" block (~lines 229-283) — plan
+   §1a: mockup first, then the app. `.segs`, `.field`, `.tip`, `.chips`/`.chip`, `.mini`/
+   `.mini.round` and `.sticker` are already shared primitives (src/theme/base.css) and are not
+   redefined here — only what's unique to The Kitchen lands in this file (tasks/step-09.md
+   §09a/§09b/§09f).
+*/
+
+.kitchen {
+  margin-top: 32px;
+  border: var(--bd) solid var(--ink);
+  border-radius: var(--r);
+  background: var(--stock);
+  box-shadow: var(--off) var(--off) 0 var(--teal);
+  overflow: hidden;
+}
+.khead {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 18px;
+  flex-wrap: wrap;
+  border-bottom: var(--bd) solid var(--ink);
+  background: var(--stock-2);
+}
+.khead h2 {
+  font-size: 25px;
+}
+.khead .guj {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 19px;
+  color: var(--teal);
+}
+.khead .sp {
+  margin-left: auto;
+}
+.kbody {
+  padding: 16px 18px 22px;
+  display: none;
+}
+.kitchen.open .kbody {
+  display: block;
+}
+.tools {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+/* ---- bins (Dinner / Shaaks / Restaurants) --------------------------------------------- */
+.bin {
+  margin-bottom: 16px;
+}
+.binhead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 9px;
+}
+.binhead .tagname {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 15px;
+  padding: 3px 13px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-ink);
+}
+.binhead .gc {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.binhead .rule {
+  flex: 1;
+  height: 2px;
+  background: var(--ink);
+  opacity: 0.16;
+}
+.bin.over .binhead .tagname {
+  transform: rotate(-2deg);
+}
+.bin.over .cards {
+  background: var(--marigold);
+  border-color: var(--ink);
+  border-style: solid;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
+  gap: 7px;
+  min-height: 46px;
+  padding: 6px;
+  border: 2px dashed transparent;
+  border-radius: var(--r-sm);
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.dcard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--stock);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 5px 6px 5px 11px;
+  cursor: grab;
+  transition:
+    transform 0.13s var(--ez),
+    box-shadow 0.13s;
+}
+.dcard:hover {
+  transform: translate(-1.5px, -1.5px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.dcard.dragging {
+  opacity: 0.3;
+  cursor: grabbing;
+}
+.dcard .nm {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dcard .rt {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+.nobin {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 13px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+/* ---- Themes tab: one inline-editable row per theme ------------------------------------ */
+.trow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  background: var(--stock);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  margin-bottom: 7px;
+  box-shadow: 3px 3px 0 var(--accent);
+}
+.trow .tic {
+  width: 40px;
+  text-align: center;
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 4px;
+  outline: none;
+  font-size: 16px;
+}
+.trow .tname {
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 17px;
+  width: 184px;
+  border-bottom: 2px solid transparent;
+}
+.trow .tname:focus {
+  border-bottom-color: var(--pink);
+}
+.trow .tsub {
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  flex: 1;
+  min-width: 110px;
+  border-bottom: 2px solid transparent;
+}
+.trow .tsub:focus {
+  border-bottom-color: var(--ink-3);
+}
+.inks {
+  display: flex;
+  gap: 4px;
+}
+.inkbtn {
+  width: 19px;
+  height: 19px;
+  border-radius: 999px;
+  border: 2px solid var(--ink);
+  transition: transform 0.12s;
+}
+.inkbtn:hover {
+  transform: scale(1.18);
+}
+.inkbtn[aria-pressed="true"] {
+  box-shadow:
+    0 0 0 2.5px var(--stock),
+    0 0 0 5px var(--ink);
+}
+.trow .n {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.trow .mini:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.trow .mini:disabled:hover {
+  background: var(--stock);
+}
