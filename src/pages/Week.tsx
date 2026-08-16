@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useNavigate, useParams } from "react-router";
 import type { Meal, PersonId, Theme } from "../../shared/api";
-import { useClearSlot, useClearWeek, useWeek } from "../lib/queries";
+import { useClearSlot, useClearWeek, useSetSlot, useWeek } from "../lib/queries";
 import { useDarkMode } from "../lib/useDarkMode";
 import { useToast } from "../lib/useToast";
 import { weekTally } from "../lib/tally";
 import { DOWS, iso, mondayOf, servedOn, shiftWeek } from "../lib/weeks";
+import { COOLDOWN_DAYS } from "../lib/freshness";
+import { surprise } from "../lib/surprise";
 import { Masthead } from "../components/Masthead";
 import { ScoreStrip } from "../components/ScoreStrip";
 import { NoteTicker } from "../components/NoteTicker";
@@ -57,11 +59,11 @@ import { KitchenPanel } from "../components/kitchen/KitchenPanel";
  * reaches the same `DishEditor` the picker's pencil does, via `editItemOrigin` ("picker" vs
  * "kitchen") deciding what `onDone` returns to — see that state's own comment below.
  *
- * What this page still deliberately leaves inert, because the components that would make
- * them do something are step 10/11's work, not this one's: Surprise me and Share the week.
- * Each of those calls `showToast` with a short "not yet" message instead of silently doing
- * nothing. **Clear week**, a slot's own clear (✕) button, the meal picker (plan-wide and
- * per-person), the theme picker, both editors and the roster/overrides sheet are all real.
+ * What this page still deliberately leaves inert, because the component that would make it
+ * do something is step 11's work, not this one's: Share the week. It calls `showToast` with
+ * a short "not yet" message instead of silently doing nothing. **Surprise me**, Clear week,
+ * a slot's own clear (✕) button, the meal picker (plan-wide and per-person), the theme
+ * picker, both editors and the roster/overrides sheet are all real.
  */
 export function Week(): ReactElement {
   const params = useParams<{ weekStart: string }>();
@@ -144,6 +146,7 @@ export function Week(): ReactElement {
   const { data: week, isLoading, isError } = useWeek(weekStart);
   const clearWeek = useClearWeek();
   const clearSlot = useClearSlot();
+  const setSlot = useSetSlot();
 
   useEffect(() => {
     if (!week) return;
@@ -172,6 +175,37 @@ export function Week(): ReactElement {
     clearSlot.mutate({ weekStart, weekday, meal });
   }
 
+  async function handleSurprise() {
+    if (!week) return;
+    const { placed, stuck } = surprise(week);
+    if (placed.length === 0 && stuck.length === 0) {
+      showToast("Every slot is already filled.");
+      return;
+    }
+    try {
+      for (const w of placed) {
+        await setSlot.mutateAsync({
+          weekStart,
+          weekday: w.weekday,
+          meal: w.meal,
+          dishId: w.dishId,
+          restaurantId: w.restaurantId,
+          lunchFormat: w.lunchFormat,
+        });
+      }
+    } catch {
+      showToast("Could not finish Surprise me — try again.");
+      return;
+    }
+    if (stuck.length === 0) {
+      showToast(`Filled ${placed.length} slot${placed.length === 1 ? "" : "s"} — nothing eaten in the last ${COOLDOWN_DAYS} days.`);
+    } else {
+      showToast(
+        `Filled ${placed.length}. Left empty: ${stuck.join(", ")} — everything in those themes was eaten within ${COOLDOWN_DAYS} days.`,
+      );
+    }
+  }
+
   const notYet = (what: string) => () => showToast(`${what} lands in a later step.`);
 
   return (
@@ -180,7 +214,9 @@ export function Week(): ReactElement {
         weekStart={weekStart}
         onPrevWeek={() => goToWeek(shiftWeek(weekStart, -1))}
         onNextWeek={() => goToWeek(shiftWeek(weekStart, 1))}
-        onSurprise={notYet("Surprise me")}
+        onSurprise={() => {
+          void handleSurprise();
+        }}
         onShareWeek={notYet("Share the week")}
         onClearWeek={handleClearWeek}
         mode={mode}
