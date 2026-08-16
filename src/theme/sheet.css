@@ -1,0 +1,278 @@
+/* Ported VERBATIM from `Main/thali-mockup.html`'s SHEET section (lines ~302-366) plus the
+   `.sheet.wide` rule (line ~453) — plan §1a: mockup first, then the app. Do not restyle.
+   Relies on tokens.css (imported globally) and base.css's primitives (`.sticker`, `.mini`,
+   `.chip`, `.field`, `.blank`), which this file does not redefine. Imported once, by
+   Sheet.tsx — every sheet content component (MealPicker, ThemePicker, DishEditor,
+   ThemeEditor, and step 08/11's later sheets) renders inside `<Sheet>` and doesn't need its
+   own copy of this side-effect import. */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(35, 31, 28, 0.55);
+  z-index: 60;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.scrim.on {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sheet {
+  position: fixed;
+  z-index: 61;
+  left: 50%;
+  top: 50%;
+  width: min(660px, calc(100vw - 28px));
+  max-height: min(85vh, 780px);
+  transform: translate(-50%, -47%) rotate(-0.4deg);
+  opacity: 0;
+  pointer-events: none;
+  background: var(--stock);
+  border: var(--bd) solid var(--ink);
+  border-radius: var(--r);
+  box-shadow: 9px 9px 0 var(--pink);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition:
+    opacity 0.2s,
+    transform 0.24s var(--ez);
+}
+/* the arrival rotation — a card dropped on a table, not a fade */
+.sheet.on {
+  opacity: 1;
+  transform: translate(-50%, -50%) rotate(0deg);
+  pointer-events: auto;
+}
+/* the wide variant step 11's print-sheet preview uses. Fully controlled by the caller via
+   Sheet's `wide` prop — never leaked from a previous sheet, because React re-renders the
+   class from the current prop value every time, not a class left over on a persistent DOM
+   node the way the mockup's own `sh.classList.remove('wide')` had to guard against. */
+.sheet.wide {
+  width: min(920px, calc(100vw - 28px));
+}
+
+.sheethead {
+  padding: 16px 20px 14px;
+  border-bottom: var(--bd) solid var(--ink);
+  position: relative;
+  background: var(--stock-2);
+}
+.sheethead h3 {
+  font-size: 26px;
+  margin-top: 2px;
+}
+.sheethead .eye {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.sheethead .x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--stock);
+}
+.sheethead .x:hover {
+  background: var(--pink);
+  color: var(--on-ink);
+}
+
+.sheetbody {
+  padding: 16px 20px 20px;
+  overflow: auto;
+  flex: 1;
+}
+
+.rl {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 16px 0 9px;
+}
+.rl:first-child {
+  margin-top: 0;
+}
+.rl .t {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 15px;
+}
+.rl .r {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.rl .rule {
+  flex: 1;
+  height: 2px;
+  background: var(--ink);
+  opacity: 0.14;
+}
+
+.picks {
+  display: grid;
+  gap: 6px;
+}
+.pick {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  /* the 999px radius eats the left inset; a name at 14px rides the pill edge without it
+     (tasks/step-07.md §07b) */
+  padding: 9px 14px 9px 20px;
+  background: var(--stock);
+  cursor: pointer;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  text-align: left;
+  width: 100%;
+  transition:
+    transform 0.13s var(--ez),
+    box-shadow 0.13s,
+    background 0.13s;
+}
+.pick:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 var(--ink);
+  background: var(--stock-2);
+}
+.pick.sel {
+  box-shadow: 4px 4px 0 var(--pink);
+  background: var(--stock-2);
+}
+.pick .col {
+  min-width: 0;
+  flex: 1;
+}
+.pick .nm {
+  display: block;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 17px;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+.pick .cu {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+.pick .rt {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+}
+.pick .lnk {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 2px solid var(--ink);
+  background: var(--stock);
+}
+.pick .lnk:hover {
+  background: var(--marigold);
+}
+
+.newrow {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.sheetfoot {
+  padding: 12px 20px;
+  border-top: var(--bd) solid var(--ink);
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  background: var(--stock-2);
+  flex-wrap: wrap;
+}
+.sheetfoot .sp {
+  margin-left: auto;
+}
+.sheetfoot .hint {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+/* the picker's own search field, sitting above whatever `.rl`-headed list follows it —
+   ported from the mockup's inline `style="margin-bottom:7px"` on that one `<label>`
+   (openPicker's `drawPicker()`, ~line 1223): a one-off gap that belongs in CSS, not a .tsx
+   inline style (thali-app/CLAUDE.md §1: no raw px in app code). */
+.picksearch {
+  margin-bottom: 7px;
+}
+
+/* the "everyone else is having X" callout inside a per-person picker (MealPicker's
+   `forPerson` branch) — ported from the mockup's inline style on that one `<div>`
+   (openPicker's forPerson branch, ~line 1219): a solid-border, colored-shadow variant of
+   `.blank` (which is dashed and unshadowed — an empty-state message, not a callout), with
+   the shadow colour supplied by the caller via the `--pc` custom property (same pattern as
+   `EaterChips.tsx`'s `.av`). */
+.banner {
+  text-align: left;
+  padding: 11px 14px;
+  margin-bottom: 13px;
+  border: 2px solid var(--ink);
+  border-radius: var(--r-sm);
+  box-shadow: 3px 3px 0 var(--pc);
+}
+
+/* a theme's icon inside a `.pick` row (ThemePicker) — ported from the mockup's inline
+   `style="font-size:19px"` (openThemePicker, ~line 1108). */
+.pick .themeic {
+  font-size: 19px;
+  line-height: 1;
+}
+
+/* the per-person row inside the overrides sheet (step 08) — CSS ported here alongside the
+   rest of the SHEET block since it's part of the same mockup section, even though no step 07
+   component renders a `.prow` yet */
+.prow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  background: var(--stock);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  margin-bottom: 7px;
+  box-shadow: 3px 3px 0 var(--pc);
+}
+.prow .who {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 16px;
+  min-width: 62px;
+}
+.prow .val {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.prow .val b {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+}
+.prow .sp {
+  margin-left: auto;
+}

@@ -180,8 +180,18 @@ h3 {
 }
 
 /* ============================================================================
-   CHIP — a filter/select pill (theme filters, freeform tags).
+   CHIP — a filter/select pill (theme filters, freeform tags), and CHIPS, its
+   flex-wrap container. Ported VERBATIM from `Main/thali-mockup.html` line ~328 — this
+   container rule was missed when `.chip` itself landed in step 02/06's port and is added
+   here (step 07) as the first step that actually renders a `.chips` group (format chips,
+   theme chips, restaurant-group chips, ink swatches). It belongs beside `.chip` as a shared
+   primitive, not in any one step's own CSS file.
    ============================================================================ */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 .chip {
   font-family: var(--display);
   font-weight: 700;
@@ -276,4 +286,20 @@ h3 {
   text-align: center;
   border: 2px dashed var(--ink-3);
   border-radius: var(--r-sm);
+}
+
+/* ============================================================================
+   TIP — a short explanatory note under a sheet's main content (the theme picker's
+   "a theme narrows, it never locks" line, the theme editor's drag-to-refile note).
+   Ported VERBATIM from `Main/thali-mockup.html` line ~250, added here (step 07, the first
+   step to render one) as a shared primitive rather than any one component's own CSS.
+   ============================================================================ */
+.tip {
+  font-size: 12px;
+  color: var(--ink-2);
+  max-width: 520px;
+}
+.tip b {
+  font-weight: 700;
+  color: var(--ink);
 }
