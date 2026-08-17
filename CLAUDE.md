@@ -157,3 +157,41 @@ So: **when Thali's rules are carried to a fifth project, copy this file and then
 | `.git/info/exclude` belt + `npm run check` before every git operation | §5, `check.mjs` | Maximus §14. `.gitignore` disappeared from disk once; `.git/info/exclude` is the layer that survives that |
 | No unignored file over 50 MB | `check.mjs` | Same incident, via Maximus §14 |
 | Local SQLite file is not backed up by git | §6, step 12 | Maximus §14, a direct consequence of going local-only. Here it is the family's meal history, not spending history, but the same fact applies: `rm -rf .wrangler` takes it all |
+| Every project ships a `Taskfile.yml` + `scripts/dev-server.sh`, and gets `start*`/`stop*`/`restart*` in `~/.devtools/proj.sh` **on day one** | §15, step 13 | **Thali**, 2026-08-17. Thali reached step 12 with neither. Nothing was broken and nothing failed a check — it was simply never wired up, so `task up` in `thali-app/` answered `no Taskfile found`, `startt` was `command not found`, and step 03 sat open at 03d because the step file had no command to hand Manc that his shell would accept. A gap that no gate can catch is exactly the kind §14 exists for |
+
+## 15. The dev runner — `task up` and `startt` *(added by step 13)*
+
+**Never tell Manc to run `npm run dev` by hand, and never hand him a bare `wrangler` incantation in a "Commands for Manc" block when a task exists.** Two layers, both of which must keep working:
+
+**Layer 1 — `thali-app/Taskfile.yml`** (ported from `maximus-app/Taskfile.yml`, run from the repo root):
+
+| | |
+|---|---|
+| `task up` | migrations, then the dev server in the **background** on 5473, returns the shell. What `startt` calls |
+| `task down` / `task status` | stop it / say whether it's up and on what pid |
+| `task dev` | foreground with logs on screen, Ctrl-C to stop — identical to `npm run dev` |
+| `task host` | foreground, `--host`, for opening the board on a phone in the kitchen |
+| `task migrate` / `task tables` | apply local D1 migrations / list the tables that landed — **this is the pair step 03 needed** |
+| `task sql -- "select …"` | one statement against the local D1 |
+| `task backup` | step 12's snapshot; runs automatically inside `task nuke` |
+| `task check` / `typecheck` / `build` / `gate` | the three gates individually, or `gate` for all three — plan §A rule 3 in one command |
+| `task clean` / `task nuke` | drop `dist/` + the vite cache / also drop the local database (backs up first, prompts) |
+
+**`task up` applies migrations before it starts the server**, deliberately: that is the Maximus §D v2.8 bug (`no such table` on every page load) made structurally impossible here.
+
+**Layer 2 — `~/.devtools/proj.sh`**, the shared launcher for all four projects, sourced from `~/.bash_profile` with:
+
+```
+[ -f ~/.devtools/proj.sh ] && source ~/.devtools/proj.sh
+```
+
+It defines `startt` / `stopt` / `restartt` (and `startm`/`startk`/`startp` for the siblings): git-pull `main`, run `task up`/`task down`, open `http://localhost:5473`. Flags: `--no-pull`, `--no-open`, `--no-defaults`. `cdt` jumps to `thali-app/`, `cdtd` to the docs root.
+
+**If `startt` is "command not found", that rc line is missing — that is the only failure mode**, and it is the one that produced this section. `proj.sh` lives outside every repo on purpose (a `git clean` in one project must not take the launcher for the other three), which also means **it is not in any backup this repo makes.**
+
+**Rules for agents:**
+
+- **`scripts/dev-server.sh` must stay a real file invoked as `bash ./scripts/dev-server.sh`.** Do not "simplify" it into an inline `nohup npm run dev &` in the Taskfile. Task runs `cmds` through mvdan/sh, an interpreter compiled into its own binary; a process backgrounded there dies with the command that started it. Maximus shipped the inline version and got "Dev server exited during startup" with an empty log every time (2026-07-29).
+- **Adding a task is cheap; adding a port is not.** 5473 is Thali's and is spoken for in three other files (`vite.config.ts`, `wrangler`'s dev server, `proj.sh`). §8 has the full allocation.
+- **A step file that needs Manc to run something local writes it as a task**, e.g. `task migrate && task tables`, not four lines of `npx wrangler`.
+- **When these rules are carried to a fifth project, wire the runner in step 02**, not step 13. `proj.sh`'s own header carries the five-item checklist.

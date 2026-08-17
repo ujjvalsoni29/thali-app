@@ -1,0 +1,186 @@
+version: "3"
+
+# ---------------------------------------------------------------------------
+# Thali — task runner.
+#
+# Ported from maximus-app/Taskfile.yml, not re-derived. Read that file's header
+# too: it records why `up` cannot just be `npm run dev &`, and that reason has
+# not changed here.
+#
+# The shape, restated so this file stands on its own: Thali has no containers.
+# There is one `vite dev` process, with @cloudflare/vite-plugin running the
+# Worker in-process and D1 backed by a SQLite file under .wrangler/state. Docker
+# compose's `up` is detached by nature and hands the terminal straight back;
+# `vite dev` does not, so `task up` has to background it itself, or `startt`
+# would hang forever holding the shell.
+#
+#   task dev    foreground, Ctrl-C to stop   (identical to `npm run dev`)
+#   task up     background + PID file        (what startt/restartt call)
+#   task down   stop whatever `up` started
+#
+# `task up` runs migrations before it starts the server. That is deliberate and
+# it is the reason this file exists at all: Maximus shipped a step that forgot
+# to apply them and every page load died `no such table` (Maximus §D v2.8), and
+# Thali's own step 03 sat open for the want of one command to run.
+#
+# Thali-specific differences from Maximus's copy:
+#   * port 5473, not 5373 (CLAUDE.md §8 — all four projects run at once)
+#   * the D1 database is `thali`
+#   * there is NO `migrate:remote` task. Maximus has one behind a prompt; Thali
+#     is local-only with no Cloudflare account at all (plan §B, CLAUDE.md §6),
+#     so `--remote` is not a thing you should be one confirmation away from.
+#     `npm run db:migrate:remote` still exists in package.json as the escape
+#     hatch if that ever changes — it is deliberately not surfaced here.
+#   * `task tables` — lists the tables in the local D1, so "did the migration
+#     actually land?" is one command and not a remembered SQL string.
+# ---------------------------------------------------------------------------
+
+vars:
+  PORT: "5473"
+  URL: "http://localhost:5473"
+  LOGFILE: ".wrangler/dev.log"
+
+tasks:
+  default:
+    cmds:
+      - task --list
+    silent: true
+
+  deps:
+    desc: Install node_modules if they're missing or out of date with the lockfile
+    internal: true
+    silent: true
+    cmds:
+      - |
+        # `npm ci` is the honest choice (it obeys the lockfile exactly), but it
+        # deletes and reinstalls node_modules every time, which is ~40s. Only pay
+        # that when the lockfile is actually newer than the install.
+        if [ ! -d node_modules ] || [ package-lock.json -nt node_modules ]; then
+          echo "Installing dependencies..."
+          npm ci
+        fi
+
+  # up / down / status delegate to scripts/dev-server.sh, and the delegation is
+  # the whole point — the header of that file explains it. Task does not shell
+  # out to bash; it runs `cmds` through a shell interpreter compiled into its own
+  # binary, and a process backgrounded there does not outlive the command that
+  # started it. Maximus learned this the expensive way on 2026-07-29: the inline
+  # `nohup npm run dev &` version looked right, ran, and left a corpse every time
+  # ("Dev server exited during startup", empty log, because npm never lived long
+  # enough to write a line). Do not re-inline it here.
+  #
+  # silent: true because the alternative is Task echoing the entire script at you
+  # before every single start.
+  up:
+    desc: Start the dev server in the background (migrations first), wait until it answers
+    silent: true
+    cmds:
+      - task: deps
+      - task: migrate
+      - bash ./scripts/dev-server.sh start
+
+  down:
+    desc: Stop the background dev server (keeps the local D1 database)
+    silent: true
+    cmds:
+      - bash ./scripts/dev-server.sh stop
+
+  status:
+    desc: Say whether the dev server is up, and on what pid
+    silent: true
+    cmds:
+      - bash ./scripts/dev-server.sh status
+
+  dev:
+    desc: Run the dev server in the foreground with logs on screen (Ctrl-C to stop)
+    cmds:
+      - task: deps
+      - task: migrate
+      - npm run dev
+
+  # `vite dev --host` as well, so the board opens from a phone on the same wifi.
+  # That is the normal way Thali gets used — Manc standing in the kitchen — not
+  # an edge case, which is also why DEPLOY_MODE is a var and never sniffed from
+  # the hostname (CLAUDE.md §6).
+  host:
+    desc: Foreground dev server bound to the LAN, for opening the board on a phone
+    cmds:
+      - task: deps
+      - task: migrate
+      - npm run dev -- --host
+
+  logs:
+    desc: Tail the background dev server's log
+    cmds:
+      - tail -f {{.LOGFILE}}
+
+  migrate:
+    desc: Apply pending D1 migrations to the local database
+    cmds:
+      - npm run db:migrate:local
+
+  tables:
+    desc: List the tables in the local D1 — the "did the migration land?" check from step 03
+    cmds:
+      - npm run db:console:local -- "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+
+  backup:
+    desc: Snapshot the local D1 database into backups/ (step 12 — run this before anything that touches .wrangler/)
+    cmds:
+      - npm run db:backup
+
+  # {{.CLI_ARGS}} is BARE here, not wrapped in quotes — and that is a fix, not a
+  # transcription slip. Maximus's copy has `-- "{{.CLI_ARGS}}"`, and CLI_ARGS
+  # already carries the quotes you typed, so that renders `-- ""select * from
+  # dishes""`: the shell then sees an unquoted `*`, globs it against the repo
+  # root, and wrangler is handed `select Taskfile.yml package.json scripts ...`.
+  # Proven both ways on 2026-08-17 (step 13). Maximus has the same bug; its
+  # `task sql` is only ever fine for statements with no `*` and no spaces.
+  sql:
+    desc: 'Run one SQL statement against the local D1 database — task sql -- "select * from dishes limit 5"'
+    cmds:
+      - npm run db:console:local -- {{.CLI_ARGS}}
+
+  check:
+    desc: Run the repo's own guard script (scripts/check.mjs)
+    cmds:
+      - npm run check
+
+  typecheck:
+    desc: TypeScript, no emit
+    cmds:
+      - npm run typecheck
+
+  build:
+    desc: check + typecheck + vite build
+    cmds:
+      - npm run build
+
+  # The full gate from plan §A rule 3, in one command, so "am I done?" has a
+  # single answer instead of three commands you can stop halfway through.
+  gate:
+    desc: The definition of done — check + typecheck + build
+    cmds:
+      - task: check
+      - task: typecheck
+      - task: build
+
+  clean:
+    desc: Stop the server and delete dist/ and the vite cache (leaves the D1 database alone)
+    cmds:
+      - task: down
+      - rm -rf dist node_modules/.vite
+      - echo "Cleaned. The local D1 database under .wrangler/state was left intact."
+
+  # `backup` first, not as a courtesy — .wrangler/state IS the family's meal
+  # history and git does not have a copy of it (CLAUDE.md §6, step 12).
+  nuke:
+    desc: "DESTRUCTIVE: back up, then also delete the local D1 database, so the next `up` migrates from empty"
+    prompt: This deletes your local Thali database — every week the family has ever planned on this machine. A backup runs first. Continue?
+    cmds:
+      - task: down
+      # `|| true` because backup.mjs exits 1 when there is no .wrangler/state to
+      # snapshot, and "nothing to lose" must not be the thing that blocks a nuke.
+      - npm run db:backup || true
+      - rm -rf dist node_modules/.vite .wrangler/state
+      - echo "Local database removed (a snapshot is in backups/). Run 'task up' to rebuild it from migrations."
