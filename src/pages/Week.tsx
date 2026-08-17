@@ -19,7 +19,9 @@ import { ThemePicker } from "../components/ThemePicker";
 import { DishEditor } from "../components/DishEditor";
 import { ThemeEditor } from "../components/ThemeEditor";
 import { OverridesSheet } from "../components/OverridesSheet";
+import { ShareSheet } from "../components/ShareSheet";
 import { KitchenPanel } from "../components/kitchen/KitchenPanel";
+import { PrintRoot } from "../share/Poster";
 
 /**
  * The week board page: masthead, score strip, note ticker, the seven day cards, the picker
@@ -59,11 +61,13 @@ import { KitchenPanel } from "../components/kitchen/KitchenPanel";
  * reaches the same `DishEditor` the picker's pencil does, via `editItemOrigin` ("picker" vs
  * "kitchen") deciding what `onDone` returns to — see that state's own comment below.
  *
- * What this page still deliberately leaves inert, because the component that would make it
- * do something is step 11's work, not this one's: Share the week. It calls `showToast` with
- * a short "not yet" message instead of silently doing nothing. **Surprise me**, Clear week,
- * a slot's own clear (✕) button, the meal picker (plan-wide and per-person), the theme
- * picker, both editors and the roster/overrides sheet are all real.
+ * Step 11 adds **Share the week** as a sixth sheet kind (`"share"`) in the same `active`
+ * state machine as the other five — `ShareSheet` needs no session state of its own beyond
+ * `week`, which this page already has, so unlike `picker`/`themePick`/etc. there is no
+ * separate `useState` object for it. It also mounts `PrintRoot` (from `src/share/Poster.tsx`)
+ * unconditionally alongside `Toast`/`Confetti` — a React portal to `document.body`, always
+ * kept in sync with the live week so **Save as PDF** can call `window.print()` at any time
+ * without an imperative "build the HTML now" step the way the mockup's `openShare()` did.
  */
 export function Week(): ReactElement {
   const params = useParams<{ weekStart: string }>();
@@ -74,7 +78,7 @@ export function Week(): ReactElement {
   const wasCompleteRef = useRef(false);
 
   // --- sheet navigation (step 07, extended by step 08) -----------------------------------
-  type ActiveSheet = "picker" | "themePick" | "editItem" | "editTheme" | "overrides" | null;
+  type ActiveSheet = "picker" | "themePick" | "editItem" | "editTheme" | "overrides" | "share" | null;
   const [active, setActive] = useState<ActiveSheet>(null);
   const [picker, setPicker] = useState<{ weekday: number; meal: Meal; forPerson: PersonId | null } | null>(null);
   const [themePick, setThemePick] = useState<{ weekday: number } | null>(null);
@@ -125,6 +129,9 @@ export function Week(): ReactElement {
   function openOverridesSheet(weekday: number, meal: Meal) {
     setOverrides({ weekday, meal });
     setActive("overrides");
+  }
+  function openShareSheet() {
+    setActive("share");
   }
   // "Pick…"/"Change" inside the roster sheet — opens the real MealPicker aimed at one
   // person. `overrides` is left set so `onReturnToRoster` below can re-show the same
@@ -206,8 +213,6 @@ export function Week(): ReactElement {
     }
   }
 
-  const notYet = (what: string) => () => showToast(`${what} lands in a later step.`);
-
   return (
     <div className="shell">
       <Masthead
@@ -217,7 +222,7 @@ export function Week(): ReactElement {
         onSurprise={() => {
           void handleSurprise();
         }}
-        onShareWeek={notYet("Share the week")}
+        onShareWeek={openShareSheet}
         onClearWeek={handleClearWeek}
         mode={mode}
         onToggleMode={toggleMode}
@@ -297,11 +302,13 @@ export function Week(): ReactElement {
             onClose={closeSheets}
             onDone={() => setActive("themePick")}
           />
+          <ShareSheet open={active === "share"} week={week} onClose={closeSheets} onToast={showToast} />
         </>
       )}
 
       <Toast message={toastMessage} />
       <Confetti burstKey={burstKey} />
+      <PrintRoot week={week} />
     </div>
   );
 }

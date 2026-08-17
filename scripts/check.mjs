@@ -94,6 +94,10 @@ const rootFiles = walk(ROOT);
 // Colour belongs in src/theme/tokens.css, never in a component. Keystone's rule, same grep.
 for (const file of appFiles) {
   if (![".ts", ".tsx"].includes(extname(file))) continue;
+  // Poster.tsx is the second legal home for raw hex, after tokens.css (tasks/step-11.md §1)
+  // — its header comment documents the light-token override poster.css re-declares so the
+  // printed sheet can never render in dark mode.
+  if (basename(file) === "Poster.tsx") continue;
   const text = readFileSync(file, "utf8");
   for (const m of text.matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
     fail("raw-hex", `${rel(file)}:${lineOf(text, m.index)}`, `${m[0]} — colour belongs in src/theme/tokens.css, not a component`);

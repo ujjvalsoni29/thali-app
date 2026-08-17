@@ -1,0 +1,352 @@
+/* Ported VERBATIM from `Main/thali-mockup.html`'s "THE PRINTABLE SHEET" section
+   (~lines 390-474) — plan §1a: mockup first, then the app. This is a SECOND layout of
+   the same week's data the board (`board.css`) already shows — a portrait, US Letter,
+   send-to-WhatsApp poster, not a restyle of the 7-across board. The board is a landscape
+   layout meant for browsing on screen; printing it directly (or "print to PDF"-ing the
+   board page) produces a bad PDF — wrong aspect ratio, chrome that doesn't belong on
+   paper, a page break through the middle of a day. `#poster`/`Poster.tsx` exist so there
+   is a purpose-built portrait document instead.
+
+   Note: the mockup's `.sheet.wide{width:min(920px,calc(100vw - 28px))}` rule already
+   lives in this app's `src/theme/sheet.css` (added for this same step's picker preview)
+   — it is not repeated here. */
+
+#printroot {
+  position: fixed;
+  left: -20000px;
+  top: 0;
+  z-index: -1;
+}
+
+/* ============================================================================
+   WHY #poster RE-DECLARES EVERY LIGHT-MODE TOKEN AS ITS OWN CUSTOM PROPERTY
+   ============================================================================
+   The five lines below (`--paper` through `--brick`) are the whole reason this rule
+   exists, so read them before touching anything else in this file.
+
+   `src/theme/tokens.css` defines the app's colour tokens twice: once on `:root` (the
+   light values — `--paper:#fbf4e4`, `--ink:#231f1c`, etc.) and once again on
+   `html[data-mode="dark"]` (brighter values on near-black stock). Every other component
+   in this app just reads `var(--paper)` etc. and lets whichever block is active — light
+   or dark — supply the value, which is exactly right for the on-screen board: it should
+   follow the user's mode.
+
+   The printable poster must NOT follow the user's mode. It is meant to be printed to PDF
+   and dropped into the family WhatsApp thread — a dark-mode poster prints on a near-black
+   background, which looks broken in a chat bubble and burns through a lot more ink than a
+   parent expects from a "meal plan for the fridge." So `#poster` below re-declares the
+   ENTIRE light-mode token block from `tokens.css`'s `:root` (not the dark block) as ITS
+   OWN custom properties, scoped directly to the `#poster` element itself, with the exact
+   same light values (`--paper:#FBF4E4`, `--ink:#231F1C`, `--stock:#FFFDF7`, and so on).
+
+   This works because of one fact about CSS custom-property inheritance: a custom property
+   declared directly on an element wins over one the element would otherwise inherit from
+   an ancestor. Normally `#poster` would inherit `--paper` etc. from wherever
+   `html[data-mode="dark"]` last set them; because `#poster` sets its own `--paper` right
+   here, that local declaration shadows the inherited one, and every rule below that reads
+   `var(--paper)` gets the light value no matter what `data-mode` the rest of the app is
+   in. Skip this block — e.g. by having the poster read the shared tokens instead of its
+   own copies — and the failure is silent: nothing errors, the poster just quietly renders
+   dark whenever the board happens to be in dark mode at share time. */
+#poster {
+  --paper: #fbf4e4;
+  --stock: #fffdf7;
+  --stock-2: #fdf6e8;
+  --paper-2: #f3e9d2;
+  --ink: #231f1c;
+  --ink-2: #5c554c;
+  --ink-3: #94897b;
+  --on-ink: #fffdf7;
+  --pink: #ff4e77;
+  --marigold: #ffb000;
+  --teal: #00a79d;
+  --blue: #3a54e8;
+  --grape: #8b4dd8;
+  --tangerine: #ff6a1f;
+  --leaf: #3e9b4f;
+  --brick: #e03e2f;
+
+  width: 816px;
+  min-height: 1056px;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 30px 32px 26px;
+  font-family: var(--sans);
+  position: relative;
+  overflow: hidden;
+}
+#poster::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(35, 31, 28, 0.13) 1.1px, transparent 1.2px);
+  background-size: 6px 6px;
+}
+#poster > * {
+  position: relative;
+}
+
+.pmast {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 2.5px solid var(--ink);
+  border-radius: 14px;
+  background: var(--stock);
+  box-shadow: 5px 5px 0 var(--pink);
+  padding: 14px 20px;
+  margin-bottom: 18px;
+}
+.pmast .mk {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+}
+.pmast .wm {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 38px;
+  line-height: 0.86;
+  letter-spacing: -0.03em;
+}
+.pmast .guj {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 26px;
+  color: var(--pink);
+  line-height: 0.86;
+  margin-left: 8px;
+}
+.pmast .sub {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-top: 4px;
+}
+.pmast .when {
+  margin-left: auto;
+  text-align: right;
+}
+.pmast .when b {
+  display: block;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 23px;
+  line-height: 1.05;
+}
+.pmast .when span {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.pday {
+  display: grid;
+  grid-template-columns: 112px 1fr 1fr;
+  border: 2.5px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: 4px 4px 0 var(--accent);
+  margin-bottom: 11px;
+  overflow: hidden;
+  background: var(--stock);
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.pday .tab {
+  background: var(--accent);
+  color: var(--on-ink);
+  padding: 9px 11px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+.pday .tab .d {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+.pday .tab .dt {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12px;
+  opacity: 0.9;
+}
+.pday .tab .th {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 11px;
+  opacity: 0.92;
+  margin-top: 3px;
+  line-height: 1.15;
+}
+.pday .cell {
+  padding: 9px 13px;
+  border-left: 2.5px solid var(--ink);
+  min-height: 74px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.pday .cell .lb {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  line-height: 1;
+}
+.pday .cell .nm {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 19px;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  margin-top: 3px;
+}
+.pday .cell .sb {
+  font-size: 11.5px;
+  color: var(--ink-2);
+  line-height: 1.25;
+  margin-top: 2px;
+}
+.pday .cell .none {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink-3);
+  margin-top: 3px;
+}
+.pday .cell .out {
+  display: inline-block;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 9.5px;
+  background: var(--pink);
+  color: var(--on-ink);
+  padding: 1px 7px;
+  border-radius: 999px;
+  margin-bottom: 3px;
+  align-self: flex-start;
+}
+.pday .ovs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+.pday .ov {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  padding: 1px 7px 1px 2px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--stock-2);
+}
+.pday .ov i {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--pc);
+  color: var(--on-ink);
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 7.5px;
+  font-style: normal;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.pfoot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  border: 2.5px solid var(--ink);
+  border-radius: 12px;
+  background: var(--stock);
+  box-shadow: 4px 4px 0 var(--teal);
+  padding: 11px 18px;
+}
+.pfoot .t {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pfoot .tt {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12px;
+  padding: 2px 11px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--tc);
+  color: var(--on-ink);
+}
+.pfoot .sig {
+  margin-left: auto;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* preview inside the sheet */
+.posterframe {
+  border: 2.5px solid var(--ink);
+  border-radius: var(--r);
+  overflow: auto;
+  background: var(--stock);
+  box-shadow: var(--off) var(--off) 0 var(--teal);
+  width: 672px;
+  max-width: 100%;
+  height: 870px;
+  margin: 0 auto;
+}
+.posterscale {
+  width: 816px;
+  transform: scale(0.8235);
+  transform-origin: top left;
+}
+
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 0;
+  }
+  html,
+  body {
+    background: #fff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  body::before {
+    display: none !important;
+  }
+  .shell,
+  .scrim,
+  .sheet,
+  .toast,
+  .confetti {
+    display: none !important;
+  }
+  #printroot {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    z-index: auto !important;
+  }
+  #poster {
+    width: 100% !important;
+    min-height: 100vh;
+    box-shadow: none;
+  }
+  /* without this the browser drops every ink block and prints a white outline drawing */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
