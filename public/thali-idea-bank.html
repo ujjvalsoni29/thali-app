@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thali · Idea Bank — વાનગી ભંડાર</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anek+Gujarati:wght@400;500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!--
+  THALI — IDEA BANK
+  =================
+  A companion to thali-mockup.html, not part of the app. The "go pick things up" shelf:
+  220 vegetarian dinner ideas across 12 cuisines plus 24 theme ideas. Tick what appeals,
+  hit Add to Thali, and the picks are written into the same store the board reads.
+
+  Same screen-printed world as the board — newsprint stock, a halftone screen, flat inks,
+  2.5px ink outlines, everything offset a few px out of register. Each cuisine gets its
+  own ink so the page reads as twelve printed panels rather than one long list.
+-->
+<style>
+:root{
+  --display:'Anek Gujarati',"Gujarati Sangam MN",system-ui,sans-serif;
+  --sans:'Hanken Grotesk',-apple-system,'Segoe UI',sans-serif;
+  --paper:#FBF4E4; --paper-2:#F3E9D2; --stock:#FFFDF7; --stock-2:#FDF6E8;
+  --ink:#231F1C; --ink-2:#5C554C; --ink-3:#94897B; --dot:rgba(35,31,28,.13);
+  --on-ink:#FFFDF7;
+  --pink:#FF4E77; --marigold:#FFB000; --teal:#00A79D; --blue:#3A54E8;
+  --grape:#8B4DD8; --tangerine:#FF6A1F; --leaf:#3E9B4F; --brick:#E03E2F;
+  --r:14px; --r-sm:9px; --bd:2.5px; --off:5px;
+  --ez:cubic-bezier(.34,1.56,.64,1);
+
+  /* the caller's drums — set per element from JS at render time (see ideaCard/panel
+     builders below), declared here so `var(--pc)` resolves in the IDE and so a panel
+     whose builder forgot one degrades to ink instead of losing the declaration entirely.
+     Mirrors src/theme/tokens.css § THE CALLER'S DRUMS in the app. */
+  --pc:var(--ink); --tc:var(--ink); --c:var(--ink);
+}
+/* dark = the same press on black stock, with brighter ink mixed for it — identical
+   reasoning and identical values to the board. See Thali_Master.md § Design System. */
+html[data-mode="dark"]{
+  --paper:#1A1613; --paper-2:#241E19; --stock:#2A231C; --stock-2:#332A21;
+  --ink:#FBF2DF; --ink-2:#BDB09C; --ink-3:#8A7E6C; --dot:rgba(251,242,223,.10);
+  --on-ink:#17130F;
+  --pink:#FF6E92; --marigold:#FFC53D; --teal:#2ED3C6; --blue:#8093FF;
+  --grape:#BC8BF2; --tangerine:#FF8E4F; --leaf:#63CC78; --brick:#FF7061;
+}
+*{margin:0; padding:0; box-sizing:border-box}
+body{font-family:var(--sans); font-size:14.5px; line-height:1.5; background:var(--paper); color:var(--ink);
+  -webkit-font-smoothing:antialiased; padding-bottom:130px; transition:background .3s, color .3s}
+body::before{content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:radial-gradient(var(--dot) 1.1px, transparent 1.2px); background-size:6px 6px}
+.shell{position:relative; z-index:1; max-width:1440px; margin:0 auto; padding:0 26px}
+button{font:inherit; color:inherit; cursor:pointer; border:0; background:none}
+input{font:inherit; color:inherit}
+a{color:inherit; text-decoration:none}
+h1,h2,h3{font-family:var(--display); font-weight:800; letter-spacing:-.02em; line-height:1.04}
+::selection{background:var(--marigold); color:var(--ink)}
+
+.sticker{display:inline-flex; align-items:center; gap:7px; height:38px; padding:0 17px;
+  border:var(--bd) solid var(--ink); border-radius:999px; background:var(--stock);
+  font-family:var(--display); font-weight:700; font-size:14px; white-space:nowrap;
+  box-shadow:3px 3px 0 var(--ink); transition:transform .1s, box-shadow .1s, background .15s}
+.sticker:hover{background:var(--marigold)}
+.sticker:active{transform:translate(3px,3px); box-shadow:0 0 0 var(--ink)}
+.sticker.hot{background:var(--pink); color:var(--on-ink)}
+.sticker.hot:hover{background:var(--tangerine)}
+.sticker.sq{width:38px; padding:0; justify-content:center}
+.sticker svg{width:16px; height:16px}
+
+/* masthead */
+.masthead{display:flex; align-items:center; gap:15px; flex-wrap:wrap; padding:26px 0 16px}
+.brand{display:flex; align-items:center; gap:13px; margin-right:auto}
+.brand .mark{width:52px; height:52px; flex:0 0 auto}
+.brand .txt{display:flex; align-items:baseline; gap:9px; flex-wrap:wrap}
+.brand .wm{font-family:var(--display); font-weight:800; font-size:40px; line-height:.86; letter-spacing:-.03em}
+.brand .guj{font-family:var(--display); font-weight:700; font-size:26px; color:var(--teal); line-height:.86}
+.brand .sub{display:block; width:100%; font-size:12.5px; color:var(--ink-2); margin-top:3px}
+
+/* the poster headline */
+.hero{border:var(--bd) solid var(--ink); border-radius:var(--r); background:var(--stock);
+  box-shadow:var(--off) var(--off) 0 var(--marigold); padding:22px 26px; margin-bottom:18px;
+  display:grid; grid-template-columns:1fr auto; gap:24px; align-items:center}
+.hero h1{font-size:38px; max-width:16ch}
+.hero h1 em{font-style:normal; color:var(--pink)}
+.hero p{color:var(--ink-2); font-size:14px; max-width:56ch; margin-top:9px}
+.tallies{display:flex; gap:10px}
+.tally{border:var(--bd) solid var(--ink); border-radius:var(--r-sm); background:var(--tc);
+  color:var(--on-ink); padding:11px 16px; text-align:center; min-width:88px}
+.tally b{display:block; font-family:var(--display); font-weight:800; font-size:30px; line-height:1}
+.tally span{font-family:var(--display); font-weight:700; font-size:12px}
+
+/* controls */
+.controls{display:flex; gap:9px; flex-wrap:wrap; align-items:center; padding:4px 0 18px}
+.field{display:flex; align-items:center; gap:8px; background:var(--stock); border:2px solid var(--ink);
+  border-radius:999px; padding:0 15px; height:40px; min-width:230px; flex:1; max-width:400px}
+.field input{border:0; background:none; outline:none; width:100%; font-size:14.5px}
+.field input::placeholder{color:var(--ink-3)}
+.field svg{width:15px; height:15px; flex:0 0 auto}
+.segs{display:flex; border:2px solid var(--ink); border-radius:999px; overflow:hidden; background:var(--stock)}
+.segs button{font-family:var(--display); font-weight:700; font-size:13px; padding:8px 16px;
+  border-left:2px solid var(--ink); transition:background .14s}
+.segs button:first-child{border-left:0}
+.segs button:hover{background:var(--paper-2)}
+.segs button[aria-pressed="true"]{background:var(--ink); color:var(--paper)}
+.chip{font-family:var(--display); font-weight:700; font-size:13px; padding:6px 14px;
+  border:2px solid var(--ink); border-radius:999px; background:var(--stock); transition:all .13s var(--ez)}
+.chip:hover{background:var(--paper-2); transform:translateY(-1px)}
+.chip[aria-pressed="true"]{background:var(--c, var(--ink)); color:var(--on-ink)}
+.chips{display:flex; gap:6px; flex-wrap:wrap}
+
+/* a cuisine is a printed panel */
+.panel{border:var(--bd) solid var(--ink); border-radius:var(--r); background:var(--stock);
+  box-shadow:var(--off) var(--off) 0 var(--pc); margin-bottom:20px; overflow:hidden}
+.panelhead{display:flex; align-items:center; gap:12px; padding:11px 18px; background:var(--pc);
+  color:var(--on-ink); border-bottom:var(--bd) solid var(--ink); flex-wrap:wrap}
+.panelhead h2{font-size:23px}
+.panelhead .guj{font-family:var(--display); font-weight:700; font-size:17px; opacity:.85}
+.panelhead .n{margin-left:auto; font-family:var(--display); font-weight:700; font-size:13px; opacity:.9}
+.panelhead .all{font-family:var(--display); font-weight:700; font-size:12px; padding:3px 12px;
+  border:2px solid var(--ink); border-radius:999px; background:var(--stock); color:var(--ink)}
+.panelhead .all:hover{background:var(--marigold)}
+.panelbody{padding:13px 14px; display:grid; grid-template-columns:repeat(auto-fill,minmax(214px,1fr)); gap:7px}
+
+.idea{display:flex; align-items:center; gap:9px; background:var(--stock-2); border:2px solid var(--ink);
+  border-radius:999px; padding:6px 13px 6px 8px; text-align:left; width:100%;
+  transition:transform .13s var(--ez), box-shadow .13s, background .13s}
+.idea:hover{transform:translate(-2px,-2px); box-shadow:4px 4px 0 var(--ink)}
+.idea[aria-pressed="true"]{background:var(--pc); color:var(--on-ink); box-shadow:4px 4px 0 var(--ink)}
+.idea .box{width:19px; height:19px; border:2px solid var(--ink); border-radius:999px; flex:0 0 auto;
+  background:var(--stock); display:grid; place-items:center; color:transparent}
+.idea[aria-pressed="true"] .box{color:var(--ink)}
+.idea[aria-pressed="true"] .tg{border-color:currentColor}
+.idea .col{min-width:0; flex:1}
+.idea .nm{display:block; font-family:var(--display); font-weight:700; font-size:15px; line-height:1.15;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.idea .tags{display:flex; gap:4px; margin-top:2px}
+.tg{font-family:var(--display); font-weight:700; font-size:10px; padding:0 6px; border-radius:999px;
+  border:1.5px solid currentColor; line-height:1.5; opacity:.8}
+
+/* theme ideas */
+.tgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(288px,1fr)); gap:13px}
+.tidea{display:flex; align-items:flex-start; gap:12px; background:var(--stock); border:var(--bd) solid var(--ink);
+  border-radius:var(--r); padding:14px 16px; text-align:left; width:100%;
+  box-shadow:var(--off) var(--off) 0 var(--pc); transition:transform .14s var(--ez), box-shadow .14s}
+.tidea:hover{transform:translate(-2px,-2px); box-shadow:calc(var(--off) + 3px) calc(var(--off) + 3px) 0 var(--pc)}
+.tidea[aria-pressed="true"]{background:var(--pc); color:var(--on-ink); box-shadow:var(--off) var(--off) 0 var(--ink)}
+.tidea .ic{font-size:26px; line-height:1; flex:0 0 auto}
+.tidea .nm{display:block; font-family:var(--display); font-weight:800; font-size:20px; line-height:1.05;
+  letter-spacing:-.02em}
+.tidea .ds{display:block; font-size:12.5px; opacity:.85; margin-top:5px; line-height:1.4}
+.tidea .ex{display:block; font-family:var(--display); font-weight:700; font-size:11.5px; opacity:.7; margin-top:7px}
+
+/* the tray */
+.tray{position:fixed; left:0; right:0; bottom:0; z-index:70; background:var(--stock);
+  border-top:var(--bd) solid var(--ink); transform:translateY(101%); transition:transform .26s var(--ez);
+  box-shadow:0 -6px 0 var(--pink)}
+.tray.on{transform:none}
+.tray .inner{max-width:1440px; margin:0 auto; padding:14px 26px; display:flex; align-items:center;
+  gap:14px; flex-wrap:wrap}
+.tray .cnt{font-family:var(--display); font-weight:800; font-size:22px; white-space:nowrap}
+.tray .list{flex:1; min-width:200px; font-size:12.5px; color:var(--ink-2); max-height:42px;
+  overflow:hidden; line-height:1.6}
+.tray .list b{color:var(--ink); font-weight:700}
+.toast{position:fixed; left:50%; bottom:104px; transform:translateX(-50%) translateY(12px); z-index:85;
+  background:var(--ink); color:var(--paper); padding:12px 20px; border-radius:999px;
+  border:var(--bd) solid var(--ink); box-shadow:4px 4px 0 var(--teal);
+  font-family:var(--display); font-weight:700; font-size:14px; opacity:0; pointer-events:none;
+  transition:all .24s var(--ez); text-align:center; max-width:min(620px,92vw)}
+.toast.on{opacity:1; transform:translateX(-50%)}
+
+footer{margin-top:32px; padding:18px 0; border-top:2px dashed var(--ink-3); color:var(--ink-2);
+  font-size:12.5px; line-height:1.8; text-align:center}
+footer b{color:var(--ink); font-weight:700}
+footer a{color:var(--pink); font-weight:700}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.001ms !important; animation-duration:.001ms !important}}
+@media (max-width:820px){ .hero{grid-template-columns:1fr} .hero h1{font-size:30px} }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="masthead">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="34" cy="34" r="23" fill="var(--teal)" opacity=".85"/>
+        <circle cx="32" cy="32" r="23" fill="var(--stock)" stroke="var(--ink)" stroke-width="3.4"/>
+        <circle cx="32" cy="32" r="16.5" fill="none" stroke="var(--ink)" stroke-width="1.5" opacity=".3"/>
+        <circle cx="32" cy="18.5" r="6" fill="var(--marigold)" stroke="var(--ink)" stroke-width="2.6"/>
+        <circle cx="45.5" cy="32" r="6" fill="var(--pink)" stroke="var(--ink)" stroke-width="2.6"/>
+        <circle cx="32" cy="45.5" r="6" fill="var(--blue)" stroke="var(--ink)" stroke-width="2.6"/>
+        <circle cx="18.5" cy="32" r="6" fill="var(--tangerine)" stroke="var(--ink)" stroke-width="2.6"/>
+        <circle cx="32" cy="32" r="4.6" fill="var(--ink)"/>
+      </svg>
+      <div class="txt">
+        <span class="wm">Idea Bank</span><span class="guj">વાનગી ભંડાર</span>
+        <span class="sub">A shelf to pick dinners off · all vegetarian</span>
+      </div>
+    </div>
+    <a class="sticker" href="/">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      The board
+    </a>
+    <button class="sticker sq" id="mode" title="Light / dark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+    </button>
+  </header>
+
+  <section class="hero">
+    <div>
+      <h1>Two hundred and twenty <em>dinners</em> you haven’t made yet.</h1>
+      <p>Tick what sounds good — dishes, themes, or both — then hit <b>Add to Thali</b> and they land
+      in The Kitchen on the board, filed under the theme they came from. Nothing is committed until
+      you export, and anything already in your roster is skipped rather than duplicated.</p>
+    </div>
+    <div class="tallies">
+      <div class="tally" style="--tc:var(--pink)"><b id="c-dish">0</b><span>dishes</span></div>
+      <div class="tally" style="--tc:var(--blue)"><b id="c-cui">0</b><span>cuisines</span></div>
+      <div class="tally" style="--tc:var(--grape)"><b id="c-th">0</b><span>themes</span></div>
+    </div>
+  </section>
+
+  <div class="controls">
+    <label class="field">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="q" placeholder="Search 220 vegetarian dinners…">
+    </label>
+    <div class="segs" id="view">
+      <button data-view="dishes" aria-pressed="true">Dishes</button>
+      <button data-view="themes" aria-pressed="false">Theme ideas</button>
+    </div>
+    <div class="chips" id="filters"></div>
+    <button class="sticker" id="clearsel">Clear picks</button>
+  </div>
+
+  <main id="main"></main>
+
+  <footer>
+    <b>Thali Idea Bank</b> — a companion to <a href="/">the board</a>, not part of the app.<br>
+    Everything listed is vegetarian. Picks export into the same browser storage the board reads.
+  </footer>
+</div>
+
+<div class="tray" id="tray"><div class="inner">
+  <span class="cnt" id="traycnt">0 picked</span>
+  <span class="list" id="traylist"></span>
+  <button class="sticker" id="traydrop">Clear</button>
+  <button class="sticker hot" id="trayadd">Add to Thali →</button>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================================
+   THE CATALOGUE — all vegetarian.
+   tags: q = quick (under ~30 min) · p = spicy · l = light · s = special effort
+   th  = which of the board's default themes it naturally belongs to
+   ============================================================================ */
+const D = (name, tags, th) => ({name, tags: tags ? tags.split(' ') : [], th: th ? th.split(' ') : []});
+
+const CUISINES = [
+  {id:'guj', n:'Gujarati & Kathiawadi', guj:'ગુજરાતી', items:[
+    D('Undhiyu','s','ghar'), D('Handvo','','ghar'), D('Muthiya','q','ghar'), D('Khandvi','s','ghar'),
+    D('Patra','','ghar'), D('Sev Usal','p','street'), D('Khaman','q','ghar'), D('Fafda & Jalebi','s','street'),
+    D('Methi Thepla','q','ghar'), D('Bajra Rotla & Ringan no Olo','','ghar'), D('Vaghareli Khichdi','q','ghar'),
+    D('Gujarati Kadhi & Bhaat','q l','ghar light'), D('Bharela Ringan','','ghar'), D('Turia Patra nu Shaak','','ghar'),
+    D('Lilva Kachori','s','street'), D('Ghughra','s','ghar'), D('Surti Locho','','street'),
+    D('Khichu','q','ghar'), D('Bhakhri Pizza','q','ghar'), D('Dudhi Muthia nu Shaak','','ghar'),
+    D('Val ni Dal','','ghar'), D('Osaman & Bhaat','l','light'), D('Rotlo & Lasan ni Chutney','','ghar'),
+    D('Dal Dhokli','q','ghar'), D('Panki','','ghar'), D('Tuvar Lilva Kachori','s','ghar'),
+  ]},
+  {id:'north', n:'North Indian & Punjabi', guj:'પંજાબી', items:[
+    D('Paneer Butter Masala','','punjab'), D('Kadhai Paneer','p','punjab'), D('Shahi Paneer','','punjab'),
+    D('Matar Paneer','q','punjab'), D('Malai Kofta','s','punjab'), D('Navratan Korma','s','punjab'),
+    D('Dum Aloo','p','punjab'), D('Aloo Gobi','q','punjab'), D('Baingan Bharta','','punjab'),
+    D('Bhindi Masala','q','punjab'), D('Chana Masala','','punjab'), D('Dal Tadka','q','punjab'),
+    D('Dal Bukhara','s','punjab'), D('Paneer Tikka Masala','p','punjab'), D('Kadhi Pakora','','punjab'),
+    D('Sarson ka Saag & Makki Roti','s','punjab'), D('Amritsari Chole & Kulcha','p','punjab'),
+    D('Paneer Lababdar','','punjab'), D('Veg Kolhapuri','p','punjab'), D('Methi Malai Matar','','punjab'),
+    D('Palak Corn','q l','light punjab'), D('Stuffed Capsicum','','punjab'), D('Soya Chaap Masala','p','punjab'),
+    D('Paneer Bhurji & Pav','q','punjab'), D('Veg Handi','','punjab'), D('Aloo Matar','q','punjab'),
+    D('Rajma Chawal','','punjab'), D('Lauki Kofta','','punjab'), D('Paneer Do Pyaza','','punjab'),
+  ]},
+  {id:'south', n:'South Indian', guj:'દક્ષિણ', items:[
+    D('Masala Dosa','','street'), D('Rava Dosa','q','street'), D('Mysore Masala Dosa','p','street'),
+    D('Uttapam','q','street'), D('Idli & Sambhar','l','light'), D('Medu Vada','','street'),
+    D('Upma','q l','light'), D('Ven Pongal','q','light'), D('Bisi Bele Bath','','ghar'),
+    D('Lemon Rice','q l','light'), D('Curd Rice','q l','light'), D('Avial','','light'),
+    D('Sambhar Rice','q','light'), D('Rasam & Rice','q l','light'), D('Appam & Veg Stew','s','passport'),
+    D('Set Dosa','q','street'), D('Neer Dosa','','street'), D('Puliyogare','q','light'),
+    D('Vegetable Korma & Parotta','','passport'), D('Kara Bath','q p','street'), D('Podi Idli','q','street'),
+  ]},
+  {id:'chinese', n:'Indo-Chinese & Wok', guj:'ચાઇનીઝ', items:[
+    D('Veg Manchurian','p','passport'), D('Chilli Paneer','p','passport'), D('Hakka Noodles','q','passport'),
+    D('Schezwan Fried Rice','q p','passport'), D('Veg Spring Rolls','','passport'),
+    D('Chilli Garlic Noodles','q p','passport'), D('Crispy Corn','q p','passport'),
+    D('American Chopsuey','','passport'), D('Veg Momos','s','street'), D('Dragon Paneer','p','passport'),
+    D('Gobi Manchurian','p','passport'), D('Triple Schezwan Rice','s p','passport'),
+    D('Paneer Chilli Dry','q p','passport'), D('Veg Hot & Sour Soup','q l','light'),
+    D('Burnt Garlic Fried Rice','q','passport'), D('Chilli Mushroom','q p','passport'),
+  ]},
+  {id:'italian', n:'Italian & Mediterranean', guj:'ઇટાલિયન', items:[
+    D('Margherita Pizza','','passport'), D('Penne Arrabbiata','q p','passport'), D('Alfredo Pasta','q','passport'),
+    D('Pesto Pasta','q','passport'), D('Veg Lasagna','s','passport'), D('Mushroom Risotto','s','passport'),
+    D('Gnocchi in Tomato Butter','','passport'), D('Bruschetta Platter','q l','light'),
+    D('Focaccia & Dips','s','passport'), D('Caprese Salad','q l','light'), D('Aglio e Olio','q','passport'),
+    D('Baked Ziti','','passport'), D('Spinach Ricotta Ravioli','s','passport'), D('Minestrone','l','light'),
+    D('Eggplant Parmigiana','s','passport'), D('Veg Moussaka','s','passport'),
+    D('Spanakopita','s','passport'), D('Greek Salad Bowl','q l','light'),
+    D('Hummus & Pita Platter','q l','light'), D('Falafel Wrap','q','passport'),
+    D('Shakshuka (eggless, chickpea)','q','passport'), D('Mujadara','','passport'),
+    D('Fattoush','q l','light'), D('Tabbouleh','q l','light'), D('Baba Ganoush & Flatbread','q l','light'),
+    D('Halloumi & Roasted Veg','q','passport'), D('Muhammara & Bread','q','passport'),
+    D('Stuffed Grape Leaves','s','passport'),
+  ]},
+  {id:'mexican', n:'Mexican & Tex-Mex', guj:'મેક્સિકન', items:[
+    D('Bean & Cheese Burrito','q','passport'), D('Veg Tacos','q','passport'), D('Quesadilla','q','passport'),
+    D('Veg Enchiladas','','passport'), D('Burrito Bowl','q l','light passport'), D('Loaded Nachos','q','passport'),
+    D('Chiles Rellenos','s p','passport'), D('Elote (street corn)','q','street'),
+    D('Black Bean Soup','l','light'), D('Tostadas','q','passport'), D('Veg Fajitas','q p','passport'),
+    D('Mexican Rice & Refried Beans','','passport'), D('Sweet Potato Tacos','q l','light'),
+  ]},
+  {id:'thai', n:'Thai & Southeast Asian', guj:'થાઈ', items:[
+    D('Thai Green Curry','p','passport'), D('Thai Red Curry','p','passport'), D('Massaman Curry','','passport'),
+    D('Pad Thai','q','passport'), D('Pad See Ew','q','passport'), D('Tom Yum Soup','q p l','light'),
+    D('Veg Larb Lettuce Cups','q l','light'), D('Fresh Summer Rolls','q l','light'),
+    D('Som Tam (papaya salad)','q p l','light'), D('Khao Soi','s p','passport'),
+    D('Thai Basil Fried Rice','q p','passport'), D('Tofu Satay & Peanut Sauce','','passport'),
+    D('Veg Laksa','s p','passport'), D('Mango Sticky Rice','','passport'),
+    D('Thai Pineapple Fried Rice','q','passport'),
+  ]},
+  {id:'east', n:'Japanese & Korean', guj:'જાપાનીઝ', items:[
+    D('Veg Sushi Rolls','s','passport'), D('Teriyaki Tofu Bowl','q','passport'), D('Veg Ramen','s','passport'),
+    D('Yakisoba','q','passport'), D('Okonomiyaki','','passport'), D('Bibimbap','','passport'),
+    D('Japchae','','passport'), D('Kimchi Fried Rice','q p','passport'), D('Tofu Katsu Curry','','passport'),
+    D('Miso Soup & Rice','q l','light'), D('Onigiri Platter','q','passport'), D('Korean Corn Cheese','q','passport'),
+  ]},
+  {id:'american', n:'American & Comfort', guj:'અમેરિકન', items:[
+    D('Veggie Burger','q','passport'), D('Mac & Cheese','q','passport'),
+    D('Grilled Cheese & Tomato Soup','q','light'), D('Loaded Baked Potato','','passport'),
+    D('Veggie Chili','','passport'), D('Veg Pot Pie','s','passport'), D('Buddha Bowl','q l','light'),
+    D('Lentil Sloppy Joes','q','passport'), D('Cornbread & Beans','','passport'),
+    D('Sheet-Pan Roasted Veg & Couscous','q l','light'), D('Baked Potato Wedges & Dips','q','street'),
+    D('Veg Philly Sandwich','q','passport'), D('Pesto Grilled Cheese','q','light'),
+  ]},
+  {id:'light', n:'Light & Everyday Healthy', guj:'હળવું', items:[
+    D('Moong Dal Chilla','q l','light'), D('Quinoa & Veg Bowl','q l','light'), D('Lentil Soup & Bread','q l','light'),
+    D('Sprout Salad Bowl','q l','light'), D('Oats Chilla','q l','light'), D('Vegetable Dalia','q l','light'),
+    D('Paneer Bhurji & Salad','q l','light'), D('Zucchini Noodles & Marinara','q l','light'),
+    D('Air-Fryer Veg Platter','q l','light'), D('Masala Oats','q l','light'),
+    D('Chickpea Salad Sandwich','q l','light'), D('Roasted Veg & Hummus Bowl','q l','light'),
+    D('Tofu Scramble & Toast','q l','light'), D('Soup & Grilled Sandwich','q l','light'),
+    D('Millet Khichdi','q l','light'), D('Steamed Momo Bowl','l','light'),
+  ]},
+  {id:'street', n:'Chaat & Street Food', guj:'ચાટ', items:[
+    D('Pani Puri','','street'), D('Sev Puri','q','street'), D('Bhel Puri','q','street'),
+    D('Dahi Puri','q','street'), D('Misal Pav','p','street'), D('Kachori Chaat','','street'),
+    D('Aloo Tikki Chaat','','street'), D('Samosa Chaat','','street'), D('Veg Frankie / Kathi Roll','q','street'),
+    D('Chole Bhature','s','street'), D('Corn Chaat','q','street'), D('Masala Pav','q','street'),
+    D('Tawa Pulav','q p','street'), D('Cheese Grilled Sandwich','q','street'),
+    D('Dahi Vada','','street'), D('Papdi Chaat','q','street'), D('Vada Pav & Fried Chilli','q p','street'),
+    D('Bombay Sandwich','q','street'), D('Chinese Bhel','q p','street'),
+  ]},
+  {id:'rice', n:'Rice & One-Pot', guj:'ભાત', items:[
+    D('Veg Biryani','s','passport'), D('Tehri','','ghar'), D('Jeera Rice & Dal Fry','q','ghar'),
+    D('Masale Bhaat','','ghar'), D('Coconut Rice','q','light'), D('Veg Pulao & Raita','q','ghar'),
+    D('Tomato Rice','q','light'), D('Khichdi & Kadhi','q l','light ghar'), D('Dal Khichdi','q l','light'),
+    D('Paneer Tikka Pulao','','punjab'), D('Corn Palak Pulao','q l','light'),
+    D('One-Pot Veg Pasta','q','passport'),
+  ]},
+];
+
+const THEME_IDEAS = [
+  {ic:'\u{1F95F}', n:'Tiffin Throwback', c:'--t-ghar', d:'Whatever your mum packed for school — thepla, theplas, dry shaak, sukhi bhaji.', ex:'Thepla · Bataka nu Shaak · Handvo'},
+  {ic:'\u{1F69B}', n:'Dhaba Night', c:'--t-punjab', d:'Highway-stop food: heavy, smoky, generous. Tandoor energy without a tandoor.', ex:'Dal Tadka · Paneer Bhurji · Tawa Roti'},
+  {ic:'\u{1F334}', n:'South Bound', c:'--t-light', d:'Dosa, idli, sambhar, rasam. The batter does most of the work the night before.', ex:'Masala Dosa · Rasam Rice · Ven Pongal'},
+  {ic:'\u{1F944}', n:'Wok Night', c:'--t-passport', d:'One pan, high heat, ten minutes. Everything gets chopped first, then it is fast.', ex:'Hakka Noodles · Chilli Paneer · Fried Rice'},
+  {ic:'\u{1FAD2}', n:'Mediterranean Table', c:'--t-light', d:'Small plates and dips, eaten with bread instead of cutlery.', ex:'Hummus · Falafel · Fattoush'},
+  {ic:'\u{1F32E}', n:'Taco Tuesday', c:'--t-street', d:'Build-your-own, which means nobody complains about the filling.', ex:'Veg Tacos · Burrito Bowl · Elote'},
+  {ic:'\u{1F963}', n:'Soup & Salad', c:'--t-light', d:'For the nights when nobody is that hungry but everyone still has to eat.', ex:'Minestrone · Greek Salad · Grilled Cheese'},
+  {ic:'\u{1F372}', n:'One Pot', c:'--t-ghar', d:'One vessel, one wash. Khichdi belongs here and so does a good pulao.', ex:'Khichdi · Bisi Bele Bath · One-Pot Pasta'},
+  {ic:'\u{1F35B}', n:'Chaat Counter', c:'--t-street', d:'Assembly, not cooking. Set out the bowls and let everyone build.', ex:'Sev Puri · Bhel · Dahi Puri'},
+  {ic:'\u{1F373}', n:'Breakfast for Dinner', c:'--t-ghar', d:'Poha, upma, chilla, pancakes. Faintly rebellious, universally popular.', ex:'Bataka Poha · Moong Dal Chilla · Uttapam'},
+  {ic:'\u{1F525}', n:'Grill Night', c:'--t-punjab', d:'Skewers and char. Works on a grill pan, an oven, or an air fryer.', ex:'Paneer Tikka · Grilled Veg · Corn'},
+  {ic:'\u{1F35D}', n:'Comfort Carbs', c:'--t-passport', d:'The night nobody is pretending to be healthy. Butter is allowed.', ex:'Mac & Cheese · Alfredo · Baked Ziti'},
+  {ic:'\u{1F9CA}', n:'Fridge Cleanout', c:'--t-light', d:'Whatever is left, turned into fried rice, a frittata-ish thing, or a bowl.', ex:'Fried Rice · Buddha Bowl · Sheet-Pan Veg'},
+  {ic:'\u{1F9D2}', n:'Kid’s Choice', c:'--t-nightoff', d:'One person picks and everybody else lives with it. Rotates weekly.', ex:'anything, that is the point'},
+  {ic:'\u{2764}\u{FE0F}', n:'Mom’s Pick', c:'--t-ghar', d:'Same rule, different chair. The cook gets to eat what they actually want.', ex:'her call'},
+  {ic:'\u{1F32C}\u{FE0F}', n:'Air Fryer Night', c:'--t-light', d:'Everything goes in the basket. Minimal oil, minimal supervision.', ex:'Air-Fryer Veg · Tikki · Wedges'},
+  {ic:'\u{1F962}', n:'No-Cook Night', c:'--t-light', d:'Salads, sandwiches, dips, leftovers. The stove stays off entirely.', ex:'Chickpea Sandwich · Sprout Salad'},
+  {ic:'\u{267B}\u{FE0F}', n:'Leftover Remix', c:'--t-ghar', d:'Yesterday’s dal becomes today’s paratha filling. Nothing gets thrown out.', ex:'Dal Paratha · Veg Frankie · Tawa Pulav'},
+  {ic:'\u{1FA94}', n:'Festival Food', c:'--t-firsttime', d:'Whatever the calendar says — Diwali, Uttarayan, Janmashtami, a birthday.', ex:'Undhiyu · Puran Poli · Shrikhand'},
+  {ic:'\u{1F327}\u{FE0F}', n:'Rainy Day', c:'--t-street', d:'Fried, hot, and eaten standing up near the window.', ex:'Bhajiya · Masala Chai · Vada Pav'},
+  {ic:'\u{23F1}\u{FE0F}', n:'30-Minute Night', c:'--t-light', d:'Hard cap. If it cannot be on the table in half an hour it is not on this list.', ex:'Aglio e Olio · Pad Thai · Chilla'},
+  {ic:'\u{1F55B}', n:'Slow Sunday', c:'--t-punjab', d:'The opposite. Something that takes all afternoon and is worth it.', ex:'Biryani · Undhiyu · Lasagna'},
+  {ic:'\u{1F9EA}', n:'Fusion Lab', c:'--t-firsttime', d:'Deliberate collisions. Some will be bad. That is the entertainment.', ex:'Bhakhri Pizza · Chinese Bhel · Masala Mac'},
+  {ic:'\u{1F35E}', n:'Baked Night', c:'--t-passport', d:'Oven does the work. Assemble, put it in, go do something else.', ex:'Lasagna · Baked Ziti · Veg Pot Pie'},
+];
+
+/* ============================================================================
+   STATE
+   ============================================================================ */
+const KEY_MAIN = 'thali.mock.v3';
+const KEY_SELF = 'thali.ideabank.v2';
+const INKS = ['--pink','--marigold','--teal','--blue','--grape','--tangerine','--leaf','--brick'];
+let sel = new Set(), selT = new Set(), view = 'dishes', q = '', filter = null;
+try{ const r = JSON.parse(localStorage.getItem(KEY_SELF) || '{}');
+     sel = new Set(r.d || []); selT = new Set(r.t || []); }catch(e){}
+const persist = () => { try{ localStorage.setItem(KEY_SELF, JSON.stringify({d:[...sel], t:[...selT]})); }catch(e){} };
+
+const ALL = CUISINES.flatMap(c => c.items.map(i => ({...i, cid:c.id})));
+const el = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const TAGN = {q:'Quick', p:'Spicy', l:'Light', s:'Weekend'};
+const cuInk = cid => `var(${INKS[CUISINES.findIndex(c => c.id === cid) % INKS.length]})`;
+
+el('c-dish').textContent = ALL.length;
+el('c-cui').textContent = CUISINES.length;
+el('c-th').textContent = THEME_IDEAS.length;
+
+const FILTERS = [{k:'q',n:'Quick',c:'--teal'},{k:'l',n:'Light',c:'--leaf'},
+                 {k:'p',n:'Spicy',c:'--brick'},{k:'s',n:'Weekend project',c:'--grape'}];
+el('filters').innerHTML = FILTERS.map(f =>
+  `<button class="chip" style="--c:var(${f.c})" data-f="${f.k}" aria-pressed="false">${f.n}</button>`).join('');
+
+/* ============================================================================
+   RENDER
+   ============================================================================ */
+const ideaCard = (i, pc) => `<button class="idea" data-pick="${esc(i.name)}" aria-pressed="${sel.has(i.name)}" style="--pc:${pc}">
+  <span class="box"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span>
+  <span class="col"><span class="nm">${esc(i.name)}</span>
+    ${i.tags.length ? `<span class="tags">${i.tags.map(t => `<span class="tg">${TAGN[t]}</span>`).join('')}</span>` : ''}
+  </span></button>`;
+
+function render(){
+  const main = el('main');
+  if(view === 'themes'){
+    main.innerHTML = `<div class="tgrid">${THEME_IDEAS
+      .filter(t => !q || (t.n + t.d).toLowerCase().includes(q.toLowerCase()))
+      .map(t => `<button class="tidea" data-pickt="${esc(t.n)}" aria-pressed="${selT.has(t.n)}" style="--pc:var(${t.c})">
+        <span class="ic">${t.ic}</span>
+        <span class="col"><span class="nm">${esc(t.n)}</span><span class="ds">${esc(t.d)}</span><span class="ex">${esc(t.ex)}</span></span>
+      </button>`).join('')}</div>`;
+  } else {
+    main.innerHTML = CUISINES.map(c => {
+      const pool = c.items.filter(i => (!q || i.name.toLowerCase().includes(q.toLowerCase()))
+                                    && (!filter || i.tags.includes(filter)));
+      if(!pool.length) return '';
+      const pc = cuInk(c.id);
+      return `<section class="panel" style="--pc:${pc}">
+        <div class="panelhead"><h2>${esc(c.n)}</h2><span class="guj">${c.guj}</span>
+          <span class="n">${pool.length}</span>
+          <button class="all" data-all="${c.id}">Pick all</button></div>
+        <div class="panelbody">${pool.map(i => ideaCard(i, pc)).join('')}</div></section>`;
+    }).join('') || '<div class="panel" style="--pc:var(--ink-3)"><div class="panelbody">Nothing matches that.</div></div>';
+  }
+  renderTray();
+}
+function renderTray(){
+  const n = sel.size + selT.size;
+  el('tray').classList.toggle('on', n > 0);
+  el('traycnt').textContent = `${n} picked`;
+  const names = [...selT].map(x => `<b>${esc(x)}</b>`).concat([...sel].map(esc));
+  el('traylist').innerHTML = names.slice(0, 20).join(' · ') + (names.length > 20 ? ` +${names.length - 20} more` : '');
+}
+let toastT;
+function toast(msg){
+  const n = el('toast'); n.textContent = msg; n.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(() => n.classList.remove('on'), 3400);
+}
+
+/* ============================================================================
+   EXPORT — writes into the board's own store. Never clobbers: existing dishes are
+   skipped, and each idea's suggested themes are remapped onto the themes that
+   actually exist now (by id, then by name — Manc may have renamed them).
+   ============================================================================ */
+function exportToThali(){
+  if(!sel.size && !selT.size){ toast('Nothing picked yet'); return; }
+  let S;
+  try{ S = JSON.parse(localStorage.getItem(KEY_MAIN) || 'null'); }catch(e){}
+  if(!S || !S.dishes){ toast('Open the board once first, then come back'); return; }
+  if(!S.themes) S.themes = [];
+  const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  let addedT = 0, addedD = 0, skipped = 0;
+
+  selT.forEach(name => {
+    if(S.themes.some(t => t.name.toLowerCase() === name.toLowerCase())){ skipped++; return; }
+    const src = THEME_IDEAS.find(t => t.n === name);
+    S.themes.push({id: slug(name) + '-' + Math.random().toString(36).slice(2,5), name,
+      sub: src ? src.d.slice(0, 46) : '', ic: src ? src.ic : '\u{1F374}',
+      c: src ? src.c : INKS[S.themes.length % INKS.length]});
+    addedT++;
+  });
+
+  const cuName = cid => (CUISINES.find(c => c.id === cid) || {}).n || 'New';
+  sel.forEach(name => {
+    if(S.dishes.some(d => d.name.toLowerCase() === name.toLowerCase())){ skipped++; return; }
+    const src = ALL.find(i => i.name === name);
+    const th = (src ? src.th : []).map(id => {
+      const hit = S.themes.find(t => t.id === id) || S.themes.find(t => slug(t.name) === id);
+      return hit ? hit.id : null;
+    }).filter(Boolean);
+    S.dishes.push({id: slug(name) + '-' + Math.random().toString(36).slice(2,5), name,
+      cu: src ? cuName(src.cid).split(' ')[0] : 'New', th});
+    addedD++;
+  });
+
+  try{ localStorage.setItem(KEY_MAIN, JSON.stringify(S)); }
+  catch(e){ toast('Could not write — storage full?'); return; }
+  sel.clear(); selT.clear(); persist(); render();
+  toast(`Added ${addedD} dish${addedD === 1 ? '' : 'es'} · ${addedT} theme${addedT === 1 ? '' : 's'}${skipped ? ` · ${skipped} already there` : ''}`);
+}
+
+/* ============================================================================
+   WIRING
+   ============================================================================ */
+document.addEventListener('click', e => {
+  const t = e.target;
+  if(!t || typeof t.closest !== 'function') return;
+  if(t.closest('a[href]')) return;
+
+  const p = t.closest('[data-pick]');
+  if(p){ const n = p.dataset.pick; sel.has(n) ? sel.delete(n) : sel.add(n); persist(); render(); return; }
+  const pt = t.closest('[data-pickt]');
+  if(pt){ const n = pt.dataset.pickt; selT.has(n) ? selT.delete(n) : selT.add(n); persist(); render(); return; }
+  const all = t.closest('[data-all]');
+  if(all){
+    const c = CUISINES.find(x => x.id === all.dataset.all);
+    const pool = c.items.filter(i => (!q || i.name.toLowerCase().includes(q.toLowerCase()))
+                                  && (!filter || i.tags.includes(filter)));
+    const everyOn = pool.every(i => sel.has(i.name));
+    pool.forEach(i => everyOn ? sel.delete(i.name) : sel.add(i.name));
+    persist(); render(); return;
+  }
+  const v = t.closest('#view button');
+  if(v){ view = v.dataset.view;
+    [...document.querySelectorAll('#view button')].forEach(b => b.setAttribute('aria-pressed', b === v));
+    render(); return; }
+  const f = t.closest('[data-f]');
+  if(f){ const k = f.dataset.f; filter = filter === k ? null : k;
+    [...document.querySelectorAll('[data-f]')].forEach(b => b.setAttribute('aria-pressed', b.dataset.f === filter));
+    render(); return; }
+  if(t.closest('#clearsel') || t.closest('#traydrop')){ sel.clear(); selT.clear(); persist(); render(); return; }
+  if(t.closest('#trayadd')){ exportToThali(); return; }
+  if(t.closest('#mode')){
+    const d = document.documentElement.dataset.mode === 'dark';
+    document.documentElement.dataset.mode = d ? 'light' : 'dark';
+    try{ localStorage.setItem('thali.mode', d ? 'light' : 'dark'); }catch(err){}
+    return;
+  }
+});
+document.addEventListener('input', e => { if(e.target.id === 'q'){ q = e.target.value; render(); } });
+
+try{ const m = localStorage.getItem('thali.mode'); if(m) document.documentElement.dataset.mode = m; }catch(e){}
+render();
+</script>
+</body>
+</html>

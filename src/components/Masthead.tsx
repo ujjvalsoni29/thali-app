@@ -138,12 +138,17 @@ export function Masthead(props: MastheadProps): ReactElement {
         {armed ? "Sure? Click again" : "Clear week"}
       </button>
 
-      {/* Assumes thali-app/ and Main/ are sibling folders on disk — this relative path
-          may need adjustment once the app is actually served rather than opened via
-          file:// like the mockup was. */}
+      {/* Served out of public/, NOT reached across the filesystem. The original href here
+          was `../Main/thali-idea-bank.html`, which worked only while both were opened off
+          file://; once the Worker served the app it collapsed to /Main/thali-idea-bank.html,
+          fell through to the SPA fallback and rendered a blank page, because App.tsx has no
+          such route and no catch-all. Main/ is outside the Vite root and outside version
+          control, so it can never be served — scripts/sync-idea-bank.mjs copies it into
+          public/ and check.mjs check 11 keeps the two honest. Root-relative, so it survives
+          being linked from a /week/:weekStart URL. */}
       <a
         className="sticker"
-        href="../Main/thali-idea-bank.html"
+        href="/thali-idea-bank.html"
         target="_blank"
         rel="noopener"
         title="220 vegetarian dinners and 24 theme ideas"

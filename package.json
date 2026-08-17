@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite dev",
     "check": "node scripts/check.mjs",
+    "sync:ideabank": "node scripts/sync-idea-bank.mjs",
     "build": "node scripts/check.mjs && tsc -b && vite build",
     "typecheck": "tsc -b --noEmit",
     "preview": "npm run build && vite preview",

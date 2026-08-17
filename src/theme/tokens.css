@@ -80,3 +80,39 @@ html[data-mode="dark"] {
   --leaf: #63cc78;
   --brick: #ff7061;
 }
+
+/* ============================================================================
+   THE CALLER'S DRUMS — properties a component sets on itself at runtime.
+
+   These are never authored in a stylesheet; a component writes them onto an element's
+   inline `style` (see DayCard, ScoreStrip, Poster, EaterChips, Confetti…) and the rules
+   below read them back out. Declaring them here does three things:
+
+     1. WebStorm can resolve them, so `var(--pc)` stops reporting
+        "Cannot resolve '--pc' custom property" at ~28 call sites;
+     2. a rule whose caller forgot to set one degrades to a sane ink instead of dropping
+        the whole declaration as invalid (an unset custom property kills `box-shadow`
+        outright — the shadow vanishes rather than falling back);
+     3. the set of runtime properties is written down in one place instead of being
+        reconstructible only by grepping for `as CSSProperties`.
+
+   Values here are DEFAULTS, not the real thing — the inline style always wins. Keep them
+   neutral (ink/stock), never a hue, so a missing setter reads as a bug you can see rather
+   than a plausible-looking colour.
+   ============================================================================ */
+:root {
+  /* a person's or panel's colour — avatars, banners, printed panel shadows */
+  --pc: var(--ink);
+  /* a day's / bin's / theme row's colour, and its soft tint for chips inside it */
+  --accent: var(--ink);
+  --accent-soft: var(--stock-2);
+  /* a chip's ink when pressed (theme + dish editors, meal picker) */
+  --c: var(--ink);
+  /* a theme tag's colour on the shareable poster */
+  --tc: var(--ink);
+  /* a score card's colour in the score strip */
+  --sc: var(--ink);
+  /* confetti: per-piece horizontal drift and spin, read by the `fall` keyframes */
+  --dx: 0px;
+  --rot: 0deg;
+}

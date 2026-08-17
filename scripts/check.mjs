@@ -376,6 +376,29 @@ if (existsSync(pkgPath)) {
   }
 }
 
+// --- 11. the served idea bank must not drift from its Main/ original ------
+// The masthead's Idea bank link pointed at `../Main/thali-idea-bank.html` for nine steps.
+// Under file:// that resolved; under the Worker it collapsed to /Main/thali-idea-bank.html,
+// hit the SPA fallback, and rendered a blank page because App.tsx has two routes and no
+// catch-all. Manc found it by clicking it. `Main/` is outside the Vite root AND outside
+// version control (§10), so the fix was to make public/thali-idea-bank.html a generated
+// copy — and a generated copy nobody regenerates is the same failure wearing a new hat.
+// This is check 8's rule (CLAUDE.md/AGENTS.md must be byte-identical) with one allowance:
+// the rewrite table in sync-idea-bank.mjs, re-applied here rather than restated.
+//
+// Main/ is not in the repo, so on a fresh clone SOURCE is absent — that is a note, not a
+// failure. A missing SERVED copy IS a failure: it means the link 404s again.
+{
+  const { SOURCE, SERVED, toServed } = await import("./sync-idea-bank.mjs");
+  if (!existsSync(SERVED)) {
+    fail("ideabank", "thali-app/public/thali-idea-bank.html", "missing — the masthead's Idea bank link points here and would 404; run `npm run sync:ideabank`");
+  } else if (!existsSync(SOURCE)) {
+    notes.push("Main/thali-idea-bank.html not present (Main/ is outside version control) — skipped the idea-bank drift check");
+  } else if (toServed(readFileSync(SOURCE, "utf8")) !== readFileSync(SERVED, "utf8")) {
+    fail("ideabank", "thali-app/public/thali-idea-bank.html", "has drifted from Main/thali-idea-bank.html — edit the Main/ original, then run `npm run sync:ideabank`");
+  }
+}
+
 // ============================================================================
 // THALI-SPECIFIC RULES — plan §A5a failed as prose TWICE (v1.1 copied Keystone's mono
 // micro-labels and 3px radii; the "no monospace / no letterspaced uppercase" corollary
@@ -480,7 +503,11 @@ if (failures.length === 0) {
   process.exit(0);
 }
 
-const byCheck = failures.reduce((acc, f) => ((acc[f.check] ??= []).push(f), acc), {});
+// Grouped with a plain loop rather than a reduce(): the one-liner form of this needs a
+// comma expression to return the accumulator, which WebStorm flags ("Comma expression")
+// and which reads worse than the three lines it saves.
+const byCheck = {};
+for (const failure of failures) (byCheck[failure.check] ??= []).push(failure);
 for (const [check, items] of Object.entries(byCheck)) {
   console.error(`\n${check} — ${items.length} problem${items.length === 1 ? "" : "s"}`);
   for (const { where, msg } of items) console.error(`  ${where}\n    ${msg}`);
